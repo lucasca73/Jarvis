@@ -21,7 +21,8 @@ jarvis/
 ├── __init__.py
 ├── app.py             # application entry point
 ├── audio/             # cross-platform microphone capture
-└── wakeword/          # local wake-word detection contracts
+├── wakeword/          # local wake-word detection
+└── capture/           # spoken-request capture contracts
 ```
 
 The project uses Python 3.9 or later. Its current dependency is `sounddevice`
@@ -183,3 +184,20 @@ Run a specific test file:
 ```bash
 python3 -m unittest tests/test_audio_models.py -v
 ```
+
+## Request capture contracts
+
+`jarvis.capture` defines the contracts for the next stage after activation:
+
+- `CaptureState.WAITING`: listen for the wake word.
+- `CaptureState.CAPTURING`: collect the spoken request after activation.
+- `AudioRequest`: associate an activation event with an immutable sequence of
+  in-memory PCM chunks. Chunks must share a format and remain in capture order.
+  The request exposes audio format, frame count, and sample-based duration.
+
+A request may include pre-roll from before activation. Empty captures do not
+produce a request. Audio chunks are omitted from the request's representation
+so routine object logging does not include PCM content.
+
+These are data contracts only. State transitions, a bounded pre-roll buffer,
+VAD, and end-of-request handling will be implemented in subsequent micro steps.

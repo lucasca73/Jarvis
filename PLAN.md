@@ -58,7 +58,7 @@ Completion criterion: saying Jarvis produces a local activation event, and the d
 
 ## Module 3 — Request capture and end-of-speech detection
 
-- [ ] 3.1 Define waiting and capturing states and an audio-request contract.
+- [x] 3.1 Define waiting and capturing states and an audio-request contract. Added `CaptureState` and `AudioRequest` in `jarvis.capture`, with format/order validation and in-memory chunks. All 36 tests passed.
 - [ ] 3.2 Maintain a short in-memory buffer to avoid losing speech at the transition.
 - [ ] 3.3 Select and encapsulate a local voice activity detection (VAD) backend.
 - [ ] 3.4 End capture on silence, no-speech timeout, or a configurable maximum duration.
@@ -115,6 +115,6 @@ Actions and tools, integrations, persistent memory, interruption during playback
 
 ## Resume here
 
-**Next micro step: 3.1 — define waiting and capturing states and an audio-request contract.** Live activation is validated for the current stage; retain step 2.10a as a follow-up during request-capture integration. Step 2.3 is validated on macOS ARM64 / Python 3.9; other target platforms remain unverified.
+**Next micro step: 3.2 — implement a bounded in-memory pre-roll buffer to preserve speech around activation.** Live activation is validated for the current stage; retain step 2.10a as a follow-up during request-capture integration. Step 2.3 is validated on macOS ARM64 / Python 3.9; other target platforms remain unverified.
 
 Latest verification: all 30 tests passed in `.venv`. Offline sample 0 detected `light up`; sample 1 detected `lovely child` and `forever`. The Jarvis keyword configuration loaded and produced no activation on sample 0. Subsequently, the user confirmed successful live microphone detection with satisfactory sensitivity. Accent handling remains a known limitation accepted for the current stage; no sensitivity changes are required based on this feedback.
