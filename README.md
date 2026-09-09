@@ -22,7 +22,8 @@ jarvis/
 ├── app.py             # application entry point
 ├── audio/             # cross-platform microphone capture
 ├── wakeword/          # local wake-word detection
-└── capture/           # spoken-request capture contracts
+├── capture/           # spoken-request contracts and pre-roll buffer
+└── vad/               # local voice activity detection
 ```
 
 The project uses Python 3.9 or later. Its current dependency is `sounddevice`
@@ -210,6 +211,57 @@ Chunks must share a PCM format and arrive in capture order. Partial trimming
 preserves complete PCM frames and the original chunk capture timestamp. The
 buffer performs no disk writes and does not open the microphone.
 
-State transitions, microphone-to-buffer integration, VAD, and end-of-request
-handling will be implemented in subsequent micro steps. The existing wake-word
+Local VAD is implemented as described below. State transitions,
+microphone-to-buffer integration, and end-of-request handling will be
+implemented in subsequent micro steps. The existing wake-word
 diagnostic still only reports activation events.
+
+
+## Local voice activity detection (VAD)
+
+`SileroVoiceActivityDetector` uses Silero through sherpa-onnx on CPU. It
+identifies speech activity without transcribing words. The runtime reads
+local model files and keeps audio in memory; it does not download models,
+send audio to a service, or save speech segments.
+
+Install the optional dependencies (shared with the wakeword extra):
+
+```bash
+.venv/bin/python -m pip install -e ".[vad]"
+```
+
+Download the model once during setup:
+
+```bash
+mkdir -p models/vad
+curl -fL https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx -o models/vad/silero_vad.onnx
+```
+
+The default path is `models/vad/silero_vad.onnx`, relative to the working
+directory; the constructor accepts a different `model_path`. The validated
+model SHA-256 is
+`9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6`.
+See the [official Silero model documentation](https://k2-fsa.github.io/sherpa/onnx/vad/silero-vad.html).
+
+The adapter consumes the same 16 kHz mono 16-bit PCM as the microphone. It
+buffers incomplete windows and returns ordered `VoiceActivity` decisions for
+all complete 512-sample windows (32 ms each). Short input may return no
+results. `reset()` discards partial input and speech state; `close()` releases
+resources. The detector supports use as a context manager.
+
+`VadConfig` defaults to a threshold of 0.5, 0.25 seconds of minimum speech,
+and 0.5 seconds of minimum silence. Decisions reflect the backend's debounced
+speech state, so the capture controller must account for this delay when
+implementing end-of-request handling. These settings are separate from the
+0.5-second pre-roll buffer. Incomplete final windows are discarded on reset;
+stream-end handling belongs to the future controller.
+
+Native completed segments are discarded after every window. The native
+segment buffer is limited to 30 seconds and internally splits speech at
+20 seconds; this is not the application's request timeout.
+
+Validation on macOS ARM64 / Python 3.9 with sherpa-onnx 1.13.7: silence
+produced no speech, the downloaded wake-word model's `test_wavs/0.wav`
+produced speech, and a two-second silence tail returned the detector to
+silence. All 51 unit tests passed. Live microphone VAD and full request
+capture are not yet validated or connected to the wake-word diagnostic.

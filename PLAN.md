@@ -1,6 +1,6 @@
 # Jarvis implementation plan
 
-Reconstructed on 2026-09-09 from the repository and user-confirmed decisions; this is not a verbatim recovery of the previous conversation. Later modules are a proposed roadmap. STT, VAD, TTS, and the specific LLM model remain to be selected.
+Reconstructed on 2026-09-09 from the repository and user-confirmed decisions; this is not a verbatim recovery of the previous conversation. Later modules are a proposed roadmap. STT, TTS, and the specific LLM model remain to be selected. Local VAD uses Silero through sherpa-onnx.
 
 ## Objective and confirmed decisions
 
@@ -60,7 +60,7 @@ Completion criterion: saying Jarvis produces a local activation event, and the d
 
 - [x] 3.1 Define waiting and capturing states and an audio-request contract. Added `CaptureState` and `AudioRequest` in `jarvis.capture`, with format/order validation and in-memory chunks. All 36 tests passed.
 - [x] 3.2 Maintain a short in-memory buffer to avoid losing speech at the transition. `PreRollBuffer` retains up to 0.5 seconds by default, trims on PCM frame boundaries, and exposes snapshots and clear. All 43 tests passed; controller integration remains pending.
-- [ ] 3.3 Select and encapsulate a local voice activity detection (VAD) backend.
+- [x] 3.3 Select and encapsulate a local voice activity detection (VAD) backend. Added Silero through sherpa-onnx on CPU, configuration and window-result contracts, PCM validation, reset, and cleanup. Downloaded the official model to `models/vad/`. All 51 tests passed; real model checks detected speech in sample 0, rejected silence, and returned to silence after a two-second tail. Live VAD validation remains pending.
 - [ ] 3.4 End capture on silence, no-speech timeout, or a configurable maximum duration.
 - [ ] 3.5 Test transitions, pauses, and limits; validate Jarvis followed by a spoken request.
 
@@ -115,6 +115,6 @@ Actions and tools, integrations, persistent memory, interruption during playback
 
 ## Resume here
 
-**Next micro step: 3.3 — select and encapsulate a local voice activity detection (VAD) backend.** Live activation is validated for the current stage; retain step 2.10a as a follow-up during request-capture integration. Step 2.3 is validated on macOS ARM64 / Python 3.9; other target platforms remain unverified.
+**Next micro step: 3.4 — implement request capture completion on silence, no-speech timeout, and maximum duration, connecting the existing capture contracts, pre-roll buffer, and VAD.** Live activation is validated for the current stage; retain step 2.10a as a follow-up during request-capture integration. Step 2.3 is validated on macOS ARM64 / Python 3.9; other target platforms remain unverified.
 
 Latest verification: all 30 tests passed in `.venv`. Offline sample 0 detected `light up`; sample 1 detected `lovely child` and `forever`. The Jarvis keyword configuration loaded and produced no activation on sample 0. Subsequently, the user confirmed successful live microphone detection with satisfactory sensitivity. Accent handling remains a known limitation accepted for the current stage; no sensitivity changes are required based on this feedback.
