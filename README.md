@@ -370,6 +370,12 @@ threads. These are single-run smoke measurements, not a latency guarantee.
 All 68 tests pass. Voice interaction is English-only for now, as confirmed by
 the user. The initial backend/model is selected below; latency remains to be measured.
 
+Run `python -m jarvis.stt.diagnostics path/to/request.wav` to benchmark a local
+English request without printing its transcript. Add `--show-text` to inspect
+the recognized text during validation. The WAV must be 16 kHz mono 16-bit PCM.
+The diagnostic reports audio length, model load time, inference time, and empty
+status; it keeps normal output free of conversation content.
+
 
 ### Initial STT backend selection
 
