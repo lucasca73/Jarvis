@@ -416,3 +416,20 @@ is warm transcription faster than audio duration, then assess conversational
 latency with the user. If accuracy is inadequate, evaluate a larger English
 Whisper model; if latency is inadequate, compare an Apple-accelerated runtime.
 Keep measurement logs to timings and counts, without transcript content.
+
+
+## Local language-model contracts
+
+`jarvis.llm` defines `TextRequest` and `TextResponse` as nonempty, trimmed
+text values held in memory, with content excluded from their representations.
+Callers must skip empty STT results before constructing a request.
+
+`LanguageModel.respond(request)` returns a response; backend failures, including
+empty answers, must raise a content-free `LanguageModelError`. Implementations
+must use local inference without remote fallback or conversation logging.
+Any history must remain bounded in memory; `reset()` clears it, and `close()`
+clears history and releases resources. Context-manager exit calls `close()`.
+The Ollama adapter and model selection are still pending.
+
+The user validated live capture and transcription on 2026-09-09 and accepted
+current recognition limitations to prioritize completing the full voice pipeline.
