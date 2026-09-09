@@ -13,6 +13,8 @@ from jarvis.vad import SileroVoiceActivityDetector
 from jarvis.vad.silero import DEFAULT_MODEL_PATH
 from jarvis.wakeword import SherpaOnnxWakeWordDetector, WakeWordConfig
 from jarvis.wakeword.sherpa import DEFAULT_KEYWORDS, DEFAULT_MODEL_DIR
+from jarvis.stt import SherpaWhisperTranscriber
+from jarvis.stt.whisper import DEFAULT_MODEL_DIR as DEFAULT_STT_MODEL_DIR
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,10 +29,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--no-speech-timeout', type=float, default=3)
     parser.add_argument('--max-duration', type=float, default=15)
     parser.add_argument('--silence-hold', type=float, default=0.5)
+    parser.add_argument('--stt-model', default=str(DEFAULT_STT_MODEL_DIR))
+    parser.add_argument('--show-text', action='store_true', help='print each transcript')
     return parser
 
 
-def run_capture(source, controller: CaptureController, duration: float) -> None:
+def run_capture(source, controller: CaptureController, duration: float, *,
+                transcriber=None, show_text: bool = False) -> None:
     """Report transitions and release request audio immediately after reporting."""
     deadline = monotonic() + duration
     print('Waiting for Jarvis. Audio stays in memory. Press Ctrl+C to stop.', flush=True)
@@ -53,9 +58,17 @@ def run_capture(source, controller: CaptureController, duration: float) -> None:
                 if request is None:
                     print('Cancelled: no speech detected. Waiting for Jarvis.', flush=True)
                 else:
-                    print(f'Request complete: {request.duration_seconds:.2f}s '
-                          f'({request.frame_count} frames, including pre-roll and silence). '
-                          'Waiting for Jarvis.', flush=True)
+                    message = (f'Request complete: {request.duration_seconds:.2f}s '
+                               f'({request.frame_count} frames, including pre-roll and silence). '
+                               'Waiting for Jarvis.')
+                    print(message, flush=True)
+                    if transcriber is not None:
+                        started = monotonic()
+                        result = transcriber.transcribe(request)
+                        elapsed = monotonic() - started
+                        print(f'STT complete: {elapsed:.3f}s empty={result.is_empty}', flush=True)
+                        if show_text:
+                            print(f'Transcript: {result.text}', flush=True)
             del request
     finally:
         if controller.state == CaptureState.CAPTURING:
@@ -74,11 +87,13 @@ def main() -> None:
         wakeword_config = WakeWordConfig(threshold=args.threshold)
         with SherpaOnnxWakeWordDetector(
             args.model_dir, keywords_file=args.keywords_file, config=wakeword_config,
-        ) as wakeword, SileroVoiceActivityDetector(args.vad_model) as vad:
+        ) as wakeword, SileroVoiceActivityDetector(args.vad_model) as vad, \
+                SherpaWhisperTranscriber(args.stt_model) as transcriber:
             controller = CaptureController(wakeword, vad, config)
             with SoundDeviceAudioInput() as source:
                 source.start(AudioConfig(device=args.device))
-                run_capture(source, controller, args.duration)
+                run_capture(source, controller, args.duration,
+                            transcriber=transcriber, show_text=args.show_text)
         print('Capture diagnostic complete.')
     except KeyboardInterrupt:
         print('\nCapture diagnostic stopped.')

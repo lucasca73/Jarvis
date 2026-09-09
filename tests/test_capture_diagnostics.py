@@ -58,6 +58,16 @@ class CaptureDiagnosticsTests(unittest.TestCase):
             self.run_chunks(1, RuntimeError('device lost'))
         self.assertEqual(self.controller.state, CaptureState.WAITING)
 
+    def test_completed_request_can_be_transcribed(self):
+        self.vad.process.side_effect = [(VoiceActivity(True, 0.1),),
+                                        (VoiceActivity(False, 0.1),)]
+        transcriber = Mock()
+        transcriber.transcribe.return_value = type('Result', (), {
+            'duration_seconds': 0.0, 'is_empty': False, 'text': 'turn on the light'
+        })()
+        output = self.run_chunks(3)
+        self.assertIn('Request complete:', output)
+
     def test_invalid_duration_does_not_open_models_or_microphone(self):
         for value in ('0', '-1', 'nan', 'inf'):
             with patch('sys.argv', ['diagnostics', '--duration', value]), \

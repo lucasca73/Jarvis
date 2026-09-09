@@ -314,7 +314,9 @@ With the wake-word and VAD models installed, run from the repository root:
 Use `--device ID` or `--device "device name"` to select a microphone. List
 devices with `.venv/bin/python -m jarvis.audio.diagnostics --list-devices`.
 The diagnostic prints activation, request completion (stored duration and
-frame count), and cancellation without saving or transcribing audio.
+frame count), and cancellation without saving audio. It also loads the local
+Whisper model and transcribes each completed request in memory. STT timing and
+empty status are always reported; add `--show-text` to print each transcript.
 
 1. Say “Jarvis” followed by a sentence, then stop speaking. Expect activation,
    completion after silence, and a return to waiting.
