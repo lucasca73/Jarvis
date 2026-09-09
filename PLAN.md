@@ -1,0 +1,120 @@
+# Jarvis implementation plan
+
+Reconstructed on 2026-09-09 from the repository and user-confirmed decisions; this is not a verbatim recovery of the previous conversation. Later modules are a proposed roadmap. STT, VAD, TTS, and the specific LLM model remain to be selected.
+
+## Objective and confirmed decisions
+
+Build a privacy-first voice assistant: microphone → wake word → request capture → transcription → local LLM → spoken response.
+
+- Privacy is the primary system requirement.
+- Use **sherpa-onnx** for local wake-word detection and **local Ollama** for LLM inference. The specific model is still undecided.
+- Select local VAD, STT, and TTS backends so the voice pipeline can operate offline after dependencies and models are installed.
+- Keep audio, transcripts, prompts, responses, and conversation history in memory by default. Logs should contain operational metadata, not conversation content.
+- Do not introduce cloud inference, remote fallback, telemetry, or content persistence by default. Any future change to these boundaries requires an explicit user decision.
+- Use English for project documentation, code, identifiers, comments, and application messages. Collaboration with the user can be in English or Portuguese. Voice interaction languages remain a separate product decision.
+- Use Python with module contracts separated from backend implementations.
+
+## Current state
+
+- Audio contracts, device discovery, continuous capture, and diagnostics are implemented. Defaults are in-memory mono PCM, 16-bit samples, 16 kHz, and 100 ms chunks.
+- The README records previous validation with a real microphone.
+- Wake-word contracts exist; the default activation word is `jarvis`.
+- The English model is present at `models/wakeword/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01/`, including encoder, decoder, joiner, tokens, BPE, and samples. Inference has not yet been validated in this reconstruction.
+- The supplied `keywords_raw.txt` contains example phrases but does not include Jarvis.
+- The sherpa-onnx adapter and microphone/WAV diagnostics are implemented. Offline sample inference passed on macOS ARM64 / Python 3.9 with sherpa-onnx 1.13.7. The user confirmed correct live Jarvis detection and satisfactory sensitivity. Accent-related recognition limitations are accepted for the current stage.
+- `jarvis.app` is currently an entry-point placeholder.
+- During plan reconstruction, all 29 tests passed with `python3 -m unittest discover -s tests -q`. Neither microphone capture nor sherpa-onnx inference was repeated.
+
+## Working method
+
+Implement one small, verifiable step at a time. Record its outcome and the next step here. Test new behavior and meaningful failure cases; validate hardware separately. Demonstrate wake-word activation before proceeding to STT, LLM, or TTS.
+
+## Module 1 — Audio input (implemented)
+
+- [x] 1.1 Define audio configuration, device, PCM chunk, and input interface.
+- [x] 1.2 List input devices and identify the default microphone.
+- [x] 1.3 Capture chunks continuously and release the device on shutdown.
+- [x] 1.4 Provide an audio-level diagnostic command.
+- [x] 1.5 Record real microphone validation, as documented in the README.
+
+Completion criterion: deliver audio chunks in memory and release the microphone on shutdown.
+
+## Module 2 — sherpa-onnx wake word (next)
+
+- [x] 2.1 Define configuration, detection event, and detector contracts.
+- [x] 2.2 Download the English model.
+- [ ] 2.3 Check official API documentation and compatibility with project Python versions and platforms. Configure the optional dependency and model paths, with clear missing-file errors.
+- [x] 2.4 Run offline inference using a supplied sample and keyword to verify the model files work together.
+- [x] 2.5 Prepare `Jarvis` using the required keyword format and tokenization. Keep project keyword configuration separate from downloaded examples.
+- [x] 2.6 Implement `SherpaOnnxWakeWordDetector`: PCM conversion, incremental processing, detection events, reset, and resource cleanup.
+- [x] 2.7 Align threshold and confidence contracts with values actually exposed by the backend; do not invent confidence probabilities.
+- [x] 2.8 Test audio conversion and validation, processing across chunks, reset, and configuration errors. Separate model integration tests from tests without external dependencies.
+- [x] 2.9 Add a microphone-to-detector diagnostic that prints activation events.
+- [x] 2.10 Validate Jarvis with the user's voice and assess sensitivity. The user confirmed correct detection and satisfactory sensitivity on 2026-09-09; accent-related recognition limitations are accepted for now.
+- [ ] 2.10a Follow-up: explicitly evaluate silence, unrelated speech, and repeated activations; add suppression if observations justify it. These checks have not been reported as completed.
+- [x] 2.11 Document the implemented sherpa-onnx backend and its installation and diagnostic commands in README.
+
+Completion criterion: saying Jarvis produces a local activation event, and the diagnostic shuts down cleanly. Record observed results and limitations.
+
+## Module 3 — Request capture and end-of-speech detection
+
+- [ ] 3.1 Define waiting and capturing states and an audio-request contract.
+- [ ] 3.2 Maintain a short in-memory buffer to avoid losing speech at the transition.
+- [ ] 3.3 Select and encapsulate a local voice activity detection (VAD) backend.
+- [ ] 3.4 End capture on silence, no-speech timeout, or a configurable maximum duration.
+- [ ] 3.5 Test transitions, pauses, and limits; validate Jarvis followed by a spoken request.
+
+Completion criterion: an activation produces a complete in-memory request or returns to waiting if no speech follows.
+
+## Module 4 — Speech-to-text (STT)
+
+- [ ] 4.1 Define transcription input and text-result contracts.
+- [ ] 4.2 Select a local backend/model based on hardware, intended spoken languages, and latency.
+- [ ] 4.3 Transcribe a captured request locally.
+- [ ] 4.4 Handle silence, empty results, and backend failures.
+- [ ] 4.5 Validate real requests in the selected languages.
+
+Completion criterion: a spoken request after Jarvis produces useful text without sending audio to an external service. The English wake-word model does not determine the STT language.
+
+## Module 5 — Local Ollama LLM
+
+- [ ] 5.1 Define text-request and response contracts.
+- [ ] 5.2 Select a locally runnable model based on available hardware and intended languages; configure the local Ollama endpoint and model name.
+- [ ] 5.3 Implement an Ollama adapter for one interaction with concise, speakable responses.
+- [ ] 5.4 Add bounded, resettable conversation history in memory.
+- [ ] 5.5 Handle timeouts, unavailable Ollama, missing models, and empty responses without remote fallback.
+- [ ] 5.6 Verify local-only inference configuration and ensure prompts/responses are excluded from application logs and persisted history by default.
+
+Completion criterion: a transcribed request receives a response from a model running locally through Ollama; a backend failure leaves the assistant usable and does not send content elsewhere.
+
+## Module 6 — Text-to-speech (TTS) and playback
+
+- [ ] 6.1 Define synthesis and playback contracts.
+- [ ] 6.2 Select a local backend and voice for the intended languages.
+- [ ] 6.3 Synthesize and play a short response locally.
+- [ ] 6.4 Prevent self-activation from the assistant's voice; initially suspend detection during playback.
+- [ ] 6.5 Handle output failures and release resources on shutdown.
+
+Completion criterion: the user hears the response and the assistant automatically returns to wake-word detection.
+
+## Module 7 — MVP integration
+
+- [ ] 7.1 Connect modules in `jarvis.app` with explicit dependencies.
+- [ ] 7.2 Consolidate states: waiting → capturing → transcribing → responding → speaking → waiting.
+- [ ] 7.3 Centralize device, model, endpoint, and limit configuration.
+- [ ] 7.4 Support Ctrl+C shutdown and recovery from module errors.
+- [ ] 7.5 Log stage and timing metadata without recording audio or conversation content by default.
+- [ ] 7.6 Validate repeated interactions and document installation and execution in English.
+- [ ] 7.7 Validate the complete pipeline without internet access after installation, and check that normal use does not persist conversation content or contact external services.
+
+Completion criterion: “Jarvis, [question]” produces a spoken response and returns to waiting without restarting, while meeting the privacy requirements above.
+
+## After the MVP
+
+Actions and tools, integrations, persistent memory, interruption during playback, and a visual interface require separately scoped work. Review their data access and retention against the privacy requirement before implementation.
+
+## Resume here
+
+**Next micro step: 3.1 — define waiting and capturing states and an audio-request contract.** Live activation is validated for the current stage; retain step 2.10a as a follow-up during request-capture integration. Step 2.3 is validated on macOS ARM64 / Python 3.9; other target platforms remain unverified.
+
+Latest verification: all 30 tests passed in `.venv`. Offline sample 0 detected `light up`; sample 1 detected `lovely child` and `forever`. The Jarvis keyword configuration loaded and produced no activation on sample 0. Subsequently, the user confirmed successful live microphone detection with satisfactory sensitivity. Accent handling remains a known limitation accepted for the current stage; no sensitivity changes are required based on this feedback.

@@ -1,6 +1,14 @@
 # JARVIS
 
-A local-first voice-activated personal assistant.
+A privacy-first voice-activated personal assistant.
+
+The planned voice pipeline runs locally, using sherpa-onnx for wake-word
+detection and local Ollama for LLM inference. Privacy is the primary
+requirement: audio and conversation content stay in memory by default, with
+no cloud fallback. Project code and documentation are written in English.
+
+See [the implementation plan](PLAN.md) for confirmed decisions, current
+progress, and the next micro step.
 
 ```text
 Audio → wake-word detection → transcription → LLM → voice response
@@ -73,6 +81,58 @@ The wake-word module currently defines local detection contracts only:
 
 The first backend will detect `jarvis` locally from the in-memory PCM chunks
 produced by the audio module.
+
+### sherpa-onnx backend
+
+`SherpaOnnxWakeWordDetector` runs keyword spotting locally on CPU using the
+English GigaSpeech Zipformer model. It consumes 16 kHz mono 16-bit PCM and
+reports activation events with `confidence=None`, since this backend does
+not expose a confidence score. The threshold controls the backend trigger.
+
+Install in a project virtual environment:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -e ".[wakeword]"
+```
+
+The model directory defaults to
+`models/wakeword/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01/`
+relative to the working directory. Use `--model-dir` to override it. The
+adapter uses the int8 encoder and joiner, the float decoder, and `tokens.txt`.
+The bundled `jarvis/wakeword/keywords.txt` was generated from `JARVIS` with
+this model's SentencePiece BPE model (`▁JA R VI S @jarvis`). SentencePiece is
+only needed to prepare new keywords, not during normal operation.
+
+Listen for Jarvis for 30 seconds (audio remains in memory):
+
+```bash
+.venv/bin/python -m jarvis.wakeword.diagnostics --duration 30
+```
+
+Use `--device 2` to select a microphone or `--threshold 0.25` to adjust the
+trigger threshold. Higher thresholds make activation harder. Press Ctrl+C
+to stop. The user validated live Jarvis detection and reported satisfactory
+sensitivity on 2026-09-09. Accent-related recognition limitations are accepted
+for the current stage. Explicit checks for silence, unrelated speech, and
+repeated activations remain follow-up work.
+
+Run offline inference against the supplied sample keywords:
+
+```bash
+.venv/bin/python -m jarvis.wakeword.diagnostics \
+  --wav models/wakeword/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01/test_wavs/0.wav \
+  --keywords-file models/wakeword/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01/test_wavs/test_keywords.txt
+```
+
+Sample `0.wav` produced `light up`; sample `1.wav` produced `lovely child`
+and `forever`. These validate model inference, not recognition of Jarvis.
+The WAV diagnostic adds a short silence tail to flush buffered features.
+
+Integration follows the [official Python example](https://github.com/k2-fsa/sherpa-onnx/blob/master/python-api-examples/keyword-spotter.py)
+and [keyword spotter API](https://github.com/k2-fsa/sherpa-onnx/blob/master/sherpa-onnx/python/sherpa_onnx/keyword_spotter.py).
+Validated with sherpa-onnx 1.13.7 on macOS ARM64 / Python 3.9; other platforms
+have not yet been exercised.
 
 To verify the entry point:
 

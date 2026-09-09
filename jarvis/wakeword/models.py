@@ -28,17 +28,17 @@ class WakeWordDetection:
     """A local wake-word detection produced from an audio stream."""
 
     wake_word: str
-    confidence: float
+    confidence: float | None
     detected_at: float
 
     def __post_init__(self) -> None:
         if not self.wake_word.strip():
             raise ValueError("wake_word must not be blank")
-        if not 0 <= self.confidence <= 1:
+        if self.confidence is not None and not 0 <= self.confidence <= 1:
             raise ValueError("confidence must be between zero and one")
 
     @classmethod
-    def create(cls, wake_word: str, confidence: float) -> WakeWordDetection:
+    def create(cls, wake_word: str, confidence: float | None) -> WakeWordDetection:
         """Create a detection timestamped with the local monotonic clock."""
         return cls(
             wake_word=wake_word,

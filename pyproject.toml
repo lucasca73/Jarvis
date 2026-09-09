@@ -12,3 +12,9 @@ dependencies = ["sounddevice>=0.5,<1"]
 
 [tool.setuptools.packages.find]
 include = ["jarvis*"]
+
+[project.optional-dependencies]
+wakeword = ["sherpa-onnx==1.13.7", "numpy>=1.23,<3"]
+
+[tool.setuptools.package-data]
+"jarvis.wakeword" = ["keywords.txt"]
