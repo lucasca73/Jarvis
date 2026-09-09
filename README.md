@@ -359,7 +359,9 @@ Whisper tiny.en files, converts each request chunk from signed 16-bit PCM to
 float samples in memory, and returns English text. It does not write audio or
 transcripts. Missing model files and unavailable dependencies fail before
 inference; backend failures are reported as `TranscriptionError` without
-including content.
+including content. Exact-zero PCM silence returns an empty result without
+invoking the model, preventing a needless inference path. Empty recognizer
+output is successful and distinguishable from `TranscriptionError`.
 
 On the Apple M4 development machine, model load took 0.152 seconds and one
 6.6-second bundled sample took 0.251 seconds to transcribe with two CPU

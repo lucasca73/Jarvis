@@ -71,7 +71,7 @@ Completion criterion: an activation produces a complete in-memory request or ret
 - [x] 4.1 Define transcription input and text-result contracts. Reused `AudioRequest` as input; added `Transcriber`, `TranscriptionResult`, and `TranscriptionError` in `jarvis.stt`. Empty recognition is distinct from backend failure, text is excluded from result repr, and context-manager cleanup is defined. All 68 tests passed; no backend selected or installed.
 - [x] 4.2 Select a local backend/model based on hardware, intended spoken languages, and latency. Selected and installed Whisper `tiny.en` through existing sherpa-onnx 1.13.7 on CPU for English-only interaction on Apple M4 / 16 GB. Verified the installed `OfflineRecognizer.from_whisper` API, loaded the int8 model, and transcribed bundled sample 0 successfully. This is an initial baseline, not a measured conversational performance claim; benchmark latency and recognition in 4.3–4.5. See README for alternatives and configuration.
 - [x] 4.3 Transcribe a captured request locally. Added `SherpaWhisperTranscriber` using the installed int8 Whisper tiny.en model, in-memory PCM conversion, English transcription, lifecycle cleanup, and content-free backend errors. All 73 tests pass. On Apple M4 / 16 GB, model load took 0.152 s and bundled 6.6 s sample inference took 0.251 s (single warm run; not a conversational benchmark).
-- [ ] 4.4 Handle silence, empty results, and backend failures.
+- [x] 4.4 Handle silence, empty results, and backend failures. Exact-silence PCM requests return an empty English result without invoking inference; empty recognizer text remains a successful empty result; malformed results and runtime failures raise content-free `TranscriptionError`. All 74 tests pass.
 - [ ] 4.5 Validate real requests in the selected languages.
 
 Completion criterion: a spoken request after Jarvis produces useful text without sending audio to an external service. The English wake-word model does not determine the STT language.
@@ -115,6 +115,6 @@ Actions and tools, integrations, persistent memory, interruption during playback
 
 ## Resume here
 
-**Next micro step: 4.3 — install the selected Whisper tiny.en model and implement local transcription of captured requests through sherpa-onnx.** Transcription contracts are implemented; all 68 tests passed. User confirmed live request capture works on 2026-09-09; all 63 tests passed. Retain step 2.10a as a follow-up. Step 2.3 is validated on macOS ARM64 / Python 3.9; other target platforms remain unverified.
+**Next micro step: 4.5 — validate real English requests in the selected language, including accent, silence, and empty-result behavior.** Transcription and failure handling are implemented; all 74 tests pass. User confirmed live request capture works on 2026-09-09. Retain step 2.10a as a follow-up. Step 2.3 is validated on macOS ARM64 / Python 3.9; other target platforms remain unverified.
 
 Latest verification: all 30 tests passed in `.venv`. Offline sample 0 detected `light up`; sample 1 detected `lovely child` and `forever`. The Jarvis keyword configuration loaded and produced no activation on sample 0. Subsequently, the user confirmed successful live microphone detection with satisfactory sensitivity. Accent handling remains a known limitation accepted for the current stage; no sensitivity changes are required based on this feedback.

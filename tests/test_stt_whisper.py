@@ -10,7 +10,7 @@ from jarvis.stt import SherpaWhisperTranscriber, TranscriptionError
 from jarvis.wakeword.models import WakeWordDetection
 
 
-def request(data=b'\x00\x00' * 1600):
+def request(data=b'\x01\x00' * 1600):
     return AudioRequest(WakeWordDetection.create('jarvis', None),
                         (AudioChunk(data, 16000, captured_at=0),))
 
@@ -34,6 +34,12 @@ class WhisperTests(unittest.TestCase):
         self.stream.result = SimpleNamespace(text='')
         result = self.transcriber.transcribe(request(bytes(3200)))
         self.assertTrue(result.is_empty)
+        self.recognizer.create_stream.assert_not_called()
+
+    def test_invalid_backend_result_is_a_transcription_error(self):
+        self.stream.result = SimpleNamespace(text=None)
+        with self.assertRaisesRegex(TranscriptionError, 'invalid result'):
+            self.transcriber.transcribe(request())
 
     def test_backend_failure_is_content_free(self):
         self.recognizer.decode_stream.side_effect = RuntimeError('secret transcript')

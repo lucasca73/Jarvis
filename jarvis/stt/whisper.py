@@ -55,14 +55,20 @@ class SherpaWhisperTranscriber(Transcriber):
         if self._np is None:
             raise RuntimeError("The STT numeric backend is unavailable")
         try:
+            if all(not chunk.data.strip(b"\x00") for chunk in request.chunks):
+                return TranscriptionResult("", "en")
             stream = self._recognizer.create_stream()
             for chunk in request.chunks:
                 samples = self._np.frombuffer(chunk.data, dtype=self._np.int16).astype(self._np.float32) / 32768.0
                 if len(samples):
                     stream.accept_waveform(request.sample_rate, samples)
             self._recognizer.decode_stream(stream)
-            return TranscriptionResult(stream.result.text, "en")
-        except ValueError:
+            result = stream.result
+            text = getattr(result, "text", "")
+            if not isinstance(text, str):
+                raise TranscriptionError("Local STT returned an invalid result")
+            return TranscriptionResult(text, "en")
+        except (ValueError, TranscriptionError):
             raise
         except Exception as exc:
             raise TranscriptionError("Local STT inference failed") from exc
