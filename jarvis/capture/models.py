@@ -10,7 +10,7 @@ from jarvis.wakeword.models import WakeWordDetection
 
 
 class CaptureState(str, Enum):
-    """Capture lifecycle; transitions will be implemented by the controller.
+    """Capture lifecycle managed by the controller.
 
     WAITING listens for activation. CAPTURING collects the spoken request.
     Completion or cancellation returns the controller to WAITING.
@@ -28,7 +28,7 @@ class AudioRequest:
     audio source's monotonic clock; pre-roll may precede the activation.
     Duration measures stored samples, not elapsed wall time or detected speech.
     An empty/cancelled capture produces no AudioRequest. This contract does
-    not establish whether speech is present; that belongs to the future VAD.
+    not establish whether speech is present; the controller uses VAD for that.
     """
 
     activation: WakeWordDetection

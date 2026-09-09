@@ -61,7 +61,7 @@ Completion criterion: saying Jarvis produces a local activation event, and the d
 - [x] 3.1 Define waiting and capturing states and an audio-request contract. Added `CaptureState` and `AudioRequest` in `jarvis.capture`, with format/order validation and in-memory chunks. All 36 tests passed.
 - [x] 3.2 Maintain a short in-memory buffer to avoid losing speech at the transition. `PreRollBuffer` retains up to 0.5 seconds by default, trims on PCM frame boundaries, and exposes snapshots and clear. All 43 tests passed; controller integration remains pending.
 - [x] 3.3 Select and encapsulate a local voice activity detection (VAD) backend. Added Silero through sherpa-onnx on CPU, configuration and window-result contracts, PCM validation, reset, and cleanup. Downloaded the official model to `models/vad/`. All 51 tests passed; real model checks detected speech in sample 0, rejected silence, and returned to silence after a two-second tail. Live VAD validation remains pending.
-- [ ] 3.4 End capture on silence, no-speech timeout, or a configurable maximum duration.
+- [x] 3.4 End capture on silence, no-speech timeout, or a configurable maximum duration. Added `CaptureController` connecting wake word, pre-roll, and VAD. Defaults: 3 seconds without speech, 15 seconds maximum after activation, and 0.5 seconds of additional silence hold after VAD debounce. Activation/pre-roll audio is retained but excluded from speech qualification. All 58 tests passed, including cancellation, short pauses, exact maximum trimming, reset, and repeated requests. Microphone integration and live validation remain in 3.5.
 - [ ] 3.5 Test transitions, pauses, and limits; validate Jarvis followed by a spoken request.
 
 Completion criterion: an activation produces a complete in-memory request or returns to waiting if no speech follows.
@@ -115,6 +115,6 @@ Actions and tools, integrations, persistent memory, interruption during playback
 
 ## Resume here
 
-**Next micro step: 3.4 — implement request capture completion on silence, no-speech timeout, and maximum duration, connecting the existing capture contracts, pre-roll buffer, and VAD.** Live activation is validated for the current stage; retain step 2.10a as a follow-up during request-capture integration. Step 2.3 is validated on macOS ARM64 / Python 3.9; other target platforms remain unverified.
+**Next micro step: 3.5 — add a microphone capture diagnostic and validate Jarvis followed by a spoken request, pauses, timeouts, and repeated interactions.** Automated controller tests are complete; live capture validation remains pending. Live activation is validated for the current stage; retain step 2.10a as a follow-up during request-capture integration. Step 2.3 is validated on macOS ARM64 / Python 3.9; other target platforms remain unverified.
 
 Latest verification: all 30 tests passed in `.venv`. Offline sample 0 detected `light up`; sample 1 detected `lovely child` and `forever`. The Jarvis keyword configuration loaded and produced no activation on sample 0. Subsequently, the user confirmed successful live microphone detection with satisfactory sensitivity. Accent handling remains a known limitation accepted for the current stage; no sensitivity changes are required based on this feedback.

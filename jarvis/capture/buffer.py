@@ -11,8 +11,8 @@ from jarvis.audio import AudioChunk
 class PreRollBuffer:
     """Retain the newest PCM frames up to a sample-based duration limit.
 
-    This buffer neither opens a microphone nor detects speech. A future capture
-    controller will append incoming chunks while waiting and take a snapshot
+    This buffer neither opens a microphone nor detects speech. The capture
+    controller appends incoming chunks while waiting and takes a snapshot
     on activation. It is intended for use by a single consumer thread.
     """
 

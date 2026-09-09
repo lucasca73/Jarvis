@@ -265,3 +265,40 @@ produced no speech, the downloaded wake-word model's `test_wavs/0.wav`
 produced speech, and a two-second silence tail returned the detector to
 silence. All 51 unit tests passed. Live microphone VAD and full request
 capture are not yet validated or connected to the wake-word diagnostic.
+
+### Request capture controller
+
+`jarvis.capture.CaptureController` connects an injected wake-word detector and
+VAD to the in-memory pre-roll buffer. Feed ordered 16 kHz mono 16-bit PCM chunks
+through `process(chunk)`. It returns an `AudioRequest` on completion, or `None`
+while waiting, capturing, or cancelling an activation without speech. The
+`state` property exposes `WAITING` and `CAPTURING`.
+
+`CaptureConfig` defaults:
+
+- `pre_roll_seconds=0.5`: retained audio up to and including activation.
+- `no_speech_timeout_seconds=3.0`: cancel if no speech is detected after activation.
+- `max_duration_seconds=15.0`: stop collecting post-activation audio at this limit.
+- `silence_hold_seconds=0.5`: require sustained non-speech decisions after speech.
+  This is additional to Silero's 0.5-second silence debounce, so the default
+  endpoint delay is approximately one second, plus window/chunk rounding.
+
+Timeouts measure audio samples, not wall-clock time. Silence and no-speech
+completion are checked at chunk boundaries; use the existing 100 ms input
+chunks. Maximum duration trims on a PCM frame boundary and excludes pre-roll.
+A request includes its pre-roll and trailing silence. Audio beyond completion
+in the final input chunk is discarded. An interrupted audio source must call
+`reset()` to discard the unfinished request; sample-based timeouts cannot
+advance while no audio arrives.
+
+Activation/pre-roll audio is not fed to VAD, preventing the activation alone
+from qualifying as a request. Speech entirely inside that audio cannot qualify
+either; this boundary needs live testing with “Jarvis” followed immediately by
+short commands. The additional silence hold tolerates brief VAD state changes;
+custom hold/debounce settings and requests longer than Silero's internal
+20-second segment limit require validation together.
+
+The controller resets detector state after completion or cancellation. It does
+not open or close the caller-owned detectors or microphone, transcribe speech,
+or persist audio. Automated controller tests pass; a live microphone capture
+diagnostic and user validation are the next micro step.
