@@ -199,5 +199,17 @@ A request may include pre-roll from before activation. Empty captures do not
 produce a request. Audio chunks are omitted from the request's representation
 so routine object logging does not include PCM content.
 
-These are data contracts only. State transitions, a bounded pre-roll buffer,
-VAD, and end-of-request handling will be implemented in subsequent micro steps.
+`PreRollBuffer` retains the newest audio in memory for up to 0.5 seconds by
+default (configurable). `append(chunk)` evicts the oldest PCM frames when the
+limit is reached; `snapshot()` returns an immutable sequence without consuming
+the buffer, and `clear()` releases retained chunks and resets format tracking.
+The limit measures stored samples, not elapsed time across capture gaps.
+Snapshots retain their audio until their consumers release them.
+
+Chunks must share a PCM format and arrive in capture order. Partial trimming
+preserves complete PCM frames and the original chunk capture timestamp. The
+buffer performs no disk writes and does not open the microphone.
+
+State transitions, microphone-to-buffer integration, VAD, and end-of-request
+handling will be implemented in subsequent micro steps. The existing wake-word
+diagnostic still only reports activation events.
