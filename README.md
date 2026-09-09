@@ -27,6 +27,14 @@ The audio module currently exposes these contracts:
 - `AudioChunk`: a timestamped in-memory PCM segment.
 - `AudioInput`: the abstract interface that an audio backend must implement.
 
+It also provides `SoundDeviceDeviceCatalog` to list input devices and identify
+the operating system's default microphone. The `sounddevice` dependency is
+installed with the project dependencies:
+
+```bash
+python3 -m pip install -e .
+```
+
 To verify the entry point:
 
 ```bash
