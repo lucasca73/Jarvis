@@ -11,7 +11,7 @@ Build a privacy-first voice assistant: microphone → wake word → request capt
 - Select local VAD, STT, and TTS backends so the voice pipeline can operate offline after dependencies and models are installed.
 - Keep audio, transcripts, prompts, responses, and conversation history in memory by default. Logs should contain operational metadata, not conversation content.
 - Do not introduce cloud inference, remote fallback, telemetry, or content persistence by default. Any future change to these boundaries requires an explicit user decision.
-- Use English for project documentation, code, identifiers, comments, and application messages. Collaboration with the user can be in English or Portuguese. Voice interaction languages remain a separate product decision.
+- Use English for project documentation, code, identifiers, comments, and application messages. Collaboration with the user can be in English or Portuguese. Voice interaction is English-only for now, confirmed by the user on 2026-09-09.
 - Use Python with module contracts separated from backend implementations.
 
 ## Current state
@@ -68,7 +68,7 @@ Completion criterion: an activation produces a complete in-memory request or ret
 
 ## Module 4 — Speech-to-text (STT)
 
-- [ ] 4.1 Define transcription input and text-result contracts.
+- [x] 4.1 Define transcription input and text-result contracts. Reused `AudioRequest` as input; added `Transcriber`, `TranscriptionResult`, and `TranscriptionError` in `jarvis.stt`. Empty recognition is distinct from backend failure, text is excluded from result repr, and context-manager cleanup is defined. All 68 tests passed; no backend selected or installed.
 - [ ] 4.2 Select a local backend/model based on hardware, intended spoken languages, and latency.
 - [ ] 4.3 Transcribe a captured request locally.
 - [ ] 4.4 Handle silence, empty results, and backend failures.
@@ -115,6 +115,6 @@ Actions and tools, integrations, persistent memory, interruption during playback
 
 ## Resume here
 
-**Next micro step: 4.1 — define backend-independent transcription input and text-result contracts.** User confirmed live request capture works on 2026-09-09; all 63 tests passed. Retain step 2.10a as a follow-up. Step 2.3 is validated on macOS ARM64 / Python 3.9; other target platforms remain unverified.
+**Next micro step: 4.2 — select a local STT backend/model based on hardware, intended spoken languages, and latency.** Transcription contracts are implemented; all 68 tests passed. User confirmed live request capture works on 2026-09-09; all 63 tests passed. Retain step 2.10a as a follow-up. Step 2.3 is validated on macOS ARM64 / Python 3.9; other target platforms remain unverified.
 
 Latest verification: all 30 tests passed in `.venv`. Offline sample 0 detected `light up`; sample 1 detected `lovely child` and `forever`. The Jarvis keyword configuration loaded and produced no activation on sample 0. Subsequently, the user confirmed successful live microphone detection with satisfactory sensitivity. Accent handling remains a known limitation accepted for the current stage; no sensitivity changes are required based on this feedback.

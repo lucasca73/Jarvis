@@ -338,3 +338,21 @@ reactivation, cancellation, interruption, source failure, and invalid session
 duration. The user confirmed live request capture works on 2026-09-09; detailed observations for every edge case have not been reported. Console events establish
 capture boundaries; they do not establish transcription accuracy or whether
 every spoken word was retained.
+
+
+### Speech-to-text contracts
+
+`jarvis.stt.Transcriber` defines synchronous local transcription of an
+`AudioRequest`, preserving the capture format and in-memory audio boundary.
+Adapters implement `transcribe(request)` and idempotent `close()`; the interface
+also supports context-manager cleanup.
+
+`TranscriptionResult` contains trimmed `text` and an optional backend-reported
+`language` code. `is_empty` identifies recognition with no usable text. Text is
+excluded from the default representation. Unsupported audio raises `ValueError`;
+backend failures use `TranscriptionError` with content-free messages. Adapters
+must keep audio and text out of logs and files and perform inference locally.
+These are contracts, not an implemented recognizer or enforced network sandbox.
+
+All 68 tests pass. Voice interaction is English-only for now, as confirmed by
+the user. Backend/model selection is next; latency remains to be measured.
