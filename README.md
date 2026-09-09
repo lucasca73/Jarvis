@@ -39,10 +39,9 @@ python3 -m pip install -e .
 100-millisecond `AudioChunk` values by default. It does not write raw audio to
 disk.
 
-Hardware capture has not yet been validated in the development environment,
-which currently exposes no input device to PortAudio. The audio backend is
-covered by simulated tests; validation with a permitted physical or virtual
-microphone remains pending.
+Hardware capture was validated with the `ME6S` input device. The audio backend
+correctly listed the device, opened a 16 kHz mono stream, received a
+100-millisecond PCM chunk, and released the stream without persisting audio.
 
 To verify the entry point:
 
