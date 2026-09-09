@@ -35,6 +35,15 @@ installed with the project dependencies:
 python3 -m pip install -e .
 ```
 
+`SoundDeviceAudioInput` captures signed 16-bit PCM in memory and returns
+100-millisecond `AudioChunk` values by default. It does not write raw audio to
+disk.
+
+Hardware capture has not yet been validated in the development environment,
+which currently exposes no input device to PortAudio. The audio backend is
+covered by simulated tests; validation with a permitted physical or virtual
+microphone remains pending.
+
 To verify the entry point:
 
 ```bash

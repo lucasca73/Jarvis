@@ -7,6 +7,7 @@ from jarvis.audio.devices import (
     SoundDeviceDeviceCatalog,
 )
 from jarvis.audio.models import AudioChunk, AudioConfig, AudioDevice
+from jarvis.audio.sounddevice_input import SoundDeviceAudioInput
 
 __all__ = [
     "AudioBackendUnavailableError",
@@ -16,4 +17,5 @@ __all__ = [
     "AudioInput",
     "NoInputDeviceError",
     "SoundDeviceDeviceCatalog",
+    "SoundDeviceAudioInput",
 ]
