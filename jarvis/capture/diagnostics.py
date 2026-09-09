@@ -24,7 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--model-dir', default=str(DEFAULT_MODEL_DIR))
     parser.add_argument('--keywords-file', default=str(DEFAULT_KEYWORDS))
     parser.add_argument('--vad-model', default=str(DEFAULT_MODEL_PATH))
-    parser.add_argument('--threshold', type=float, default=0.5)
+    parser.add_argument('--threshold', type=float, default=0.25)
     parser.add_argument('--pre-roll', type=float, default=0.5)
     parser.add_argument('--no-speech-timeout', type=float, default=3)
     parser.add_argument('--max-duration', type=float, default=15)

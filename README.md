@@ -135,7 +135,8 @@ To find the microphone device ID:
 ```
 
 Use `--device 2` to select a microphone or `--threshold 0.25` to adjust the
-trigger threshold. Higher thresholds make activation harder. For example,
+trigger threshold. The default is 0.25; higher thresholds make activation harder
+and lower thresholds increase recall while allowing more false activations. For example,
 replace `2` with an input device ID from the list:
 
 ```bash

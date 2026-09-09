@@ -11,7 +11,8 @@ class WakeWordConfig:
     """Configuration shared by wake-word detector implementations."""
 
     wake_word: str = "jarvis"
-    threshold: float = 0.5
+    # Lower values improve recall at the cost of more false activations.
+    threshold: float = 0.25
 
     def __post_init__(self) -> None:
         normalized_wake_word = self.wake_word.strip().casefold()
