@@ -22,7 +22,7 @@ class WakeWordConfigTests(unittest.TestCase):
             WakeWordConfig(threshold=1.1)
 
     def test_default_threshold_favors_recall(self) -> None:
-        self.assertEqual(WakeWordConfig().threshold, 0.25)
+        self.assertEqual(WakeWordConfig().threshold, 0.35)
 
 
 class WakeWordDetectionTests(unittest.TestCase):

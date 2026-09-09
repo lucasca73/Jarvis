@@ -19,7 +19,7 @@ def main() -> None:
     parser.add_argument('--wav', help='read a 16 kHz mono 16-bit PCM WAV instead of the microphone')
     parser.add_argument('--device', type=parse_device)
     parser.add_argument('--duration', type=float, default=30)
-    parser.add_argument('--threshold', type=float, default=0.25)
+    parser.add_argument('--threshold', type=float, default=0.35)
     args = parser.parse_args()
     if not 0 < args.duration < float('inf'):
         parser.error('--duration must be finite and greater than zero')

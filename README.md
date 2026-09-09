@@ -134,8 +134,8 @@ To find the microphone device ID:
 .venv/bin/python -m jarvis.audio.diagnostics --list-devices
 ```
 
-Use `--device 2` to select a microphone or `--threshold 0.25` to adjust the
-trigger threshold. The default is 0.25; higher thresholds make activation harder
+Use `--device 2` to select a microphone or `--threshold 0.35` to adjust the
+trigger threshold. The default is 0.35; higher thresholds make activation harder
 and lower thresholds increase recall while allowing more false activations. For example,
 replace `2` with an input device ID from the list:
 
