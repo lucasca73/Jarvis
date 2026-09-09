@@ -354,6 +354,17 @@ backend failures use `TranscriptionError` with content-free messages. Adapters
 must keep audio and text out of logs and files and perform inference locally.
 These are contracts, not an implemented recognizer or enforced network sandbox.
 
+The first adapter is `jarvis.stt.SherpaWhisperTranscriber`. It loads the int8
+Whisper tiny.en files, converts each request chunk from signed 16-bit PCM to
+float samples in memory, and returns English text. It does not write audio or
+transcripts. Missing model files and unavailable dependencies fail before
+inference; backend failures are reported as `TranscriptionError` without
+including content.
+
+On the Apple M4 development machine, model load took 0.152 seconds and one
+6.6-second bundled sample took 0.251 seconds to transcribe with two CPU
+threads. These are single-run smoke measurements, not a latency guarantee.
+
 All 68 tests pass. Voice interaction is English-only for now, as confirmed by
 the user. The initial backend/model is selected below; latency remains to be measured.
 

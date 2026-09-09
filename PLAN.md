@@ -70,7 +70,7 @@ Completion criterion: an activation produces a complete in-memory request or ret
 
 - [x] 4.1 Define transcription input and text-result contracts. Reused `AudioRequest` as input; added `Transcriber`, `TranscriptionResult`, and `TranscriptionError` in `jarvis.stt`. Empty recognition is distinct from backend failure, text is excluded from result repr, and context-manager cleanup is defined. All 68 tests passed; no backend selected or installed.
 - [x] 4.2 Select a local backend/model based on hardware, intended spoken languages, and latency. Selected and installed Whisper `tiny.en` through existing sherpa-onnx 1.13.7 on CPU for English-only interaction on Apple M4 / 16 GB. Verified the installed `OfflineRecognizer.from_whisper` API, loaded the int8 model, and transcribed bundled sample 0 successfully. This is an initial baseline, not a measured conversational performance claim; benchmark latency and recognition in 4.3–4.5. See README for alternatives and configuration.
-- [ ] 4.3 Transcribe a captured request locally.
+- [x] 4.3 Transcribe a captured request locally. Added `SherpaWhisperTranscriber` using the installed int8 Whisper tiny.en model, in-memory PCM conversion, English transcription, lifecycle cleanup, and content-free backend errors. All 73 tests pass. On Apple M4 / 16 GB, model load took 0.152 s and bundled 6.6 s sample inference took 0.251 s (single warm run; not a conversational benchmark).
 - [ ] 4.4 Handle silence, empty results, and backend failures.
 - [ ] 4.5 Validate real requests in the selected languages.
 
