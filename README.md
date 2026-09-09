@@ -12,13 +12,12 @@ Audio → wake-word detection → transcription → LLM → voice response
 jarvis/
 ├── __init__.py
 ├── app.py             # application entry point
-└── audio/             # audio-capture contracts and future implementation
-    ├── input.py
-    └── models.py
+├── audio/             # cross-platform microphone capture
+└── wakeword/          # local wake-word detection contracts
 ```
 
-The project uses Python 3.9 or later. There are no external dependencies yet:
-audio capture will be implemented in the next step.
+The project uses Python 3.9 or later. Its current dependency is `sounddevice`
+for cross-platform microphone access.
 
 The audio module currently exposes these contracts:
 
@@ -63,6 +62,17 @@ To select a device and change the duration:
 ```bash
 python3 -m jarvis.audio.diagnostics --device 2 --duration 10
 ```
+
+## Wake-word detection
+
+The wake-word module currently defines local detection contracts only:
+
+- `WakeWordConfig`: the activation phrase and confidence threshold.
+- `WakeWordDetection`: a timestamped activation event.
+- `WakeWordDetector`: the interface for a future local detector backend.
+
+The first backend will detect `jarvis` locally from the in-memory PCM chunks
+produced by the audio module.
 
 To verify the entry point:
 
