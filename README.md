@@ -301,4 +301,40 @@ custom hold/debounce settings and requests longer than Silero's internal
 The controller resets detector state after completion or cancellation. It does
 not open or close the caller-owned detectors or microphone, transcribe speech,
 or persist audio. Automated controller tests pass; a live microphone capture
-diagnostic and user validation are the next micro step.
+diagnostic is available below; the user confirmed live capture works on 2026-09-09.
+
+### Live request capture test
+
+With the wake-word and VAD models installed, run from the repository root:
+
+```bash
+.venv/bin/python -m jarvis.capture.diagnostics --duration 90
+```
+
+Use `--device ID` or `--device "device name"` to select a microphone. List
+devices with `.venv/bin/python -m jarvis.audio.diagnostics --list-devices`.
+The diagnostic prints activation, request completion (stored duration and
+frame count), and cancellation without saving or transcribing audio.
+
+1. Say “Jarvis” followed by a sentence, then stop speaking. Expect activation,
+   completion after silence, and a return to waiting.
+2. Say only “Jarvis”. Expect cancellation after three seconds without speech.
+3. Speak a request with a brief pause, then continue. Check that it stays in
+   one request. Repeat with a longer pause to observe the endpoint.
+4. Repeat several requests to check that each activation starts fresh.
+5. Test a shorter maximum with `--max-duration 4 --no-speech-timeout 2`.
+   Keep speaking after activation: capture should finish after four seconds
+   of post-activation audio, with up to 0.5 seconds of pre-roll added.
+6. Test “Jarvis” immediately followed by a short command, and compare with
+   waiting for the activation message before speaking. Report missed commands.
+
+`--silence-hold`, `--pre-roll`, and `--no-speech-timeout` configure the controller
+in seconds. `--threshold` configures wake-word sensitivity; `--model-dir`,
+`--keywords-file`, and `--vad-model` override model paths. `--duration` limits
+the whole session; expiry or Ctrl+C discards any unfinished request.
+
+Automated verification: all 63 tests pass, including diagnostic completion,
+reactivation, cancellation, interruption, source failure, and invalid session
+duration. The user confirmed live request capture works on 2026-09-09; detailed observations for every edge case have not been reported. Console events establish
+capture boundaries; they do not establish transcription accuracy or whether
+every spoken word was retained.
