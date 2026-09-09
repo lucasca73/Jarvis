@@ -355,4 +355,42 @@ must keep audio and text out of logs and files and perform inference locally.
 These are contracts, not an implemented recognizer or enforced network sandbox.
 
 All 68 tests pass. Voice interaction is English-only for now, as confirmed by
-the user. Backend/model selection is next; latency remains to be measured.
+the user. The initial backend/model is selected below; latency remains to be measured.
+
+
+### Initial STT backend selection
+
+Selected on 2026-09-09: **Whisper tiny.en through sherpa-onnx 1.13.7, CPU**.
+The development machine is an Apple M4 Mac mini with 16 GB RAM; the existing
+Python environment already runs sherpa-onnx for wake word and VAD. English-only
+interaction allows an English-only model. Reusing the installed inference stack
+keeps the first adapter small and supports in-memory PCM input.
+
+The model is installed under `models/stt/sherpa-onnx-whisper-tiny.en/`. The
+int8 encoder and decoder loaded successfully, and bundled sample 0 produced a
+transcription locally.
+
+The [official sherpa-onnx tiny.en documentation](https://k2-fsa.github.io/sherpa/onnx/pretrained_models/whisper/tiny.en.html)
+provides an exported ONNX model. The installed Python API was inspected and
+exposes `OfflineRecognizer.from_whisper` with encoder, decoder, tokens, language,
+task, thread count, and provider arguments. Initial settings will be
+`language="en"`, `task="transcribe"`, `provider="cpu"`, `num_threads=2`, and
+`debug=False`, loading explicit files under `models/stt/`. Model download is a
+setup action; normal transcription must use local files without network access.
+
+Alternatives considered:
+
+- [whisper.cpp](https://github.com/ggml-org/whisper.cpp) supports Apple Silicon
+  acceleration through Metal and Core ML. It is a useful candidate if CPU
+  latency is inadequate, but requires another runtime and an in-memory binding.
+- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) provides a Python
+  API and CPU int8 inference, but introduces the CTranslate2 inference stack.
+
+Choosing tiny.en is an initial integration decision, not a benchmark result or
+an accuracy guarantee. Next, measure model load time and warm transcription latency on
+short English requests and the 15-second capture limit; check recognition of
+the user's accent, silence, and empty output. A provisional engineering target
+is warm transcription faster than audio duration, then assess conversational
+latency with the user. If accuracy is inadequate, evaluate a larger English
+Whisper model; if latency is inadequate, compare an Apple-accelerated runtime.
+Keep measurement logs to timings and counts, without transcript content.
