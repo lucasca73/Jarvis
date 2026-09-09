@@ -7,7 +7,7 @@ name = "jarvis"
 version = "0.1.0"
 description = "A local-first voice-activated personal assistant."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 
 [tool.setuptools.packages.find]
 include = ["jarvis*"]
