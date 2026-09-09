@@ -39,9 +39,30 @@ python3 -m pip install -e .
 100-millisecond `AudioChunk` values by default. It does not write raw audio to
 disk.
 
-Hardware capture was validated with the `ME6S` input device. The audio backend
+Hardware capture was validated with a real input device. The audio backend
 correctly listed the device, opened a 16 kHz mono stream, received a
 100-millisecond PCM chunk, and released the stream without persisting audio.
+
+### Audio diagnostics
+
+List available input devices without opening the microphone:
+
+```bash
+python3 -m jarvis.audio.diagnostics --list-devices
+```
+
+Open the default microphone for five seconds and show its live signal level.
+Audio remains in memory and is discarded after each chunk:
+
+```bash
+python3 -m jarvis.audio.diagnostics
+```
+
+To select a device and change the duration:
+
+```bash
+python3 -m jarvis.audio.diagnostics --device 2 --duration 10
+```
 
 To verify the entry point:
 
