@@ -104,18 +104,48 @@ The bundled `jarvis/wakeword/keywords.txt` was generated from `JARVIS` with
 this model's SentencePiece BPE model (`▁JA R VI S @jarvis`). SentencePiece is
 only needed to prepare new keywords, not during normal operation.
 
-Listen for Jarvis for 30 seconds (audio remains in memory):
+#### Live Jarvis voice test
+
+After installing the wakeword extra and downloading the model, run this
+command from the project root to listen through the default microphone for
+30 seconds:
 
 ```bash
 .venv/bin/python -m jarvis.wakeword.diagnostics --duration 30
 ```
 
+When `Listening locally` appears, say **“Jarvis”** clearly. A successful
+activation prints:
+
+```text
+Wake word detected: jarvis
+```
+
+Pause briefly and say “Jarvis” again to check another activation. The command
+exits after 30 seconds; press Ctrl+C to stop early. This diagnostic only
+reports wake-word events; it does not transcribe a request or speak a reply.
+Audio is processed locally in memory and is not saved.
+
+To find the microphone device ID:
+
+```bash
+.venv/bin/python -m jarvis.audio.diagnostics --list-devices
+```
+
 Use `--device 2` to select a microphone or `--threshold 0.25` to adjust the
-trigger threshold. Higher thresholds make activation harder. Press Ctrl+C
-to stop. The user validated live Jarvis detection and reported satisfactory
+trigger threshold. Higher thresholds make activation harder. For example,
+replace `2` with an input device ID from the list:
+
+```bash
+.venv/bin/python -m jarvis.wakeword.diagnostics --device 2 --duration 30
+```
+
+The user validated live Jarvis detection and reported satisfactory
 sensitivity on 2026-09-09. Accent-related recognition limitations are accepted
 for the current stage. Explicit checks for silence, unrelated speech, and
 repeated activations remain follow-up work.
+
+#### Offline sample test
 
 Run offline inference against the supplied sample keywords:
 
