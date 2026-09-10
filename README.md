@@ -436,6 +436,19 @@ configuration stays at construction time.
 The user validated live capture and transcription on 2026-09-09 and accepted
 current recognition limitations to prioritize completing the full voice pipeline.
 
+## Speech synthesis and playback contracts
+
+`jarvis.tts` defines backend-independent contracts for the response-to-voice
+boundary. `Synthesizer.synthesize(TextResponse)` returns `SynthesizedAudio`,
+which contains nonempty, frame-aligned PCM bytes and an explicit sample format.
+`AudioPlayer.play(SynthesizedAudio)` owns output playback and exposes
+`is_playing`; `stop()` must release output resources. Both components support
+context-manager cleanup. Backend failures use `SynthesisError` or
+`AudioPlayerError` and must not include response text or audio contents.
+
+Audio remains in memory and is not written by these contracts. A local TTS
+backend and output-device implementation will be selected in the next step.
+
 
 ### Local Ollama adapter
 
