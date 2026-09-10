@@ -504,6 +504,32 @@ confirm audibility and voice quality. All 105 tests passed, covering PCM clippin
 invalid model output, output failures, retry, and cleanup on interruption.
 Wake-word suspension and full pipeline integration remain later steps.
 
+### Playback suspension diagnostic
+
+Test repeated captures with a fixed spoken confirmation containing "Jarvis":
+
+```bash
+.venv/bin/python -m jarvis.capture.diagnostics --duration 90 --speak-confirmation
+```
+
+Say "Jarvis" followed by an English request, then remain silent during the
+confirmation. The microphone is stopped and its queue discarded before
+synthesis/playback; the capture controller resets before and after output.
+Listening resumes with the original input configuration after output finishes.
+The confirmation should not cause another activation. Then say a new request
+to verify reactivation. `--output-device ID` selects playback independently of
+the input `--device`; `--show-text` remains opt-in for STT output.
+
+This mode speaks a fixed sentence, not an LLM answer. The synchronous
+`jarvis.capture.playback.speak_response` helper accepts any `TextResponse` and
+injected synthesizer/player. Expected synthesis/playback errors restore listening;
+Ctrl+C and output cleanup failures leave input stopped for shutdown. Automatic
+tests cover ordering, queue clearing, repeated cycles, failure recovery, and
+interruption. The user confirmed hearing the spoken confirmation on 2026-09-10.
+Detailed live self-activation and room echo observations remain unreported; no echo
+cancellation or post-playback delay is implemented. Full pipeline wiring remains
+in module 7.
+
 
 ### Local Ollama adapter
 

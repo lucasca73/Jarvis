@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import math
+from contextlib import ExitStack
 from time import monotonic
 
 from jarvis.audio import AudioConfig, SoundDeviceAudioInput
@@ -15,6 +16,9 @@ from jarvis.wakeword import SherpaOnnxWakeWordDetector, WakeWordConfig
 from jarvis.wakeword.sherpa import DEFAULT_KEYWORDS, DEFAULT_MODEL_DIR
 from jarvis.stt import SherpaWhisperTranscriber
 from jarvis.stt.whisper import DEFAULT_MODEL_DIR as DEFAULT_STT_MODEL_DIR
+from jarvis.capture.playback import speak_response
+from jarvis.llm import TextResponse
+from jarvis.tts import SherpaPiperSynthesizer, SoundDeviceAudioPlayer, SynthesisError, AudioPlayerError
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -31,11 +35,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--silence-hold', type=float, default=0.5)
     parser.add_argument('--stt-model', default=str(DEFAULT_STT_MODEL_DIR))
     parser.add_argument('--show-text', action='store_true', help='print each transcript')
+    parser.add_argument('--speak-confirmation', action='store_true',
+                        help='test microphone suspension with a fixed spoken confirmation')
+    parser.add_argument('--output-device', type=parse_device)
     return parser
 
 
 def run_capture(source, controller: CaptureController, duration: float, *,
-                transcriber=None, show_text: bool = False) -> None:
+                transcriber=None, show_text: bool = False, confirmation=None) -> None:
     """Report transitions and release request audio immediately after reporting."""
     deadline = monotonic() + duration
     print('Waiting for Jarvis. Audio stays in memory. Press Ctrl+C to stop.', flush=True)
@@ -69,6 +76,13 @@ def run_capture(source, controller: CaptureController, duration: float, *,
                         print(f'STT complete: {elapsed:.3f}s empty={result.is_empty}', flush=True)
                         if show_text:
                             print(f'Transcript: {result.text}', flush=True)
+                    if confirmation is not None:
+                        try:
+                            confirmation()
+                        except (SynthesisError, AudioPlayerError):
+                            if not source.is_running:
+                                raise
+                            print('Spoken confirmation failed. Listening restored.', flush=True)
             del request
     finally:
         if controller.state == CaptureState.CAPTURING:
@@ -90,10 +104,24 @@ def main() -> None:
         ) as wakeword, SileroVoiceActivityDetector(args.vad_model) as vad, \
                 SherpaWhisperTranscriber(args.stt_model) as transcriber:
             controller = CaptureController(wakeword, vad, config)
-            with SoundDeviceAudioInput() as source:
-                source.start(AudioConfig(device=args.device))
+            with ExitStack() as stack:
+                confirmation = None
+                source = stack.enter_context(SoundDeviceAudioInput())
+                audio_config = AudioConfig(device=args.device)
+                if args.speak_confirmation:
+                    synth = stack.enter_context(SherpaPiperSynthesizer())
+                    player = stack.enter_context(SoundDeviceAudioPlayer(args.output_device))
+
+                    def confirmation():
+                        print('Speaking confirmation with microphone suspended.', flush=True)
+                        speak_response(source, controller, audio_config, synth, player,
+                                       TextResponse('Jarvis is ready for your next request.'))
+                        print('Waiting for Jarvis.', flush=True)
+
+                source.start(audio_config)
                 run_capture(source, controller, args.duration,
-                            transcriber=transcriber, show_text=args.show_text)
+                            transcriber=transcriber, show_text=args.show_text,
+                            confirmation=confirmation)
         print('Capture diagnostic complete.')
     except KeyboardInterrupt:
         print('\nCapture diagnostic stopped.')
