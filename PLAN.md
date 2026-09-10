@@ -22,6 +22,7 @@ Build a privacy-first voice assistant: microphone → wake word → request capt
 ## Current state
 
 - `jarvis.app` connects microphone capture, Jarvis activation, Silero VAD, Whisper STT, local Ollama, Piper TTS, and playback through injected dependencies.
+- The current assistant has no computer-action executor: the LLM cannot run shell commands, open applications, or modify files.
 - Input is 16 kHz mono 16-bit PCM in 100 ms chunks. Audio and conversation content are retained in memory by default; history is bounded and resettable.
 - Local model bundles are installed in the development workspace. Packaged `jarvis/wakeword/keywords.txt` supplies Jarvis separately from downloaded examples.
 - Offline sample inference and live wake-word/capture/STT validation passed. The user confirmed audible confirmation and the integrated pipeline on 2026-09-10. Recognition quality and accent limitations are accepted until after MVP consolidation.
@@ -33,12 +34,12 @@ Build a privacy-first voice assistant: microphone → wake word → request capt
 
 Implement one small, verifiable step at a time. Record its outcome and the next step here. Test new behavior and meaningful failure cases; validate hardware separately. The initial wake-word demonstration prerequisite was met before subsequent pipeline integration.
 
-Priority change on 2026-09-10: the user deferred the validation work and requested
-planning for a minimal status interface and executable. Steps 2.3a, 2.10a, and
+Priority change on 2026-09-10: the user deferred the broader validation work and
+requested a minimal status interface and executable. Steps 2.3a, 2.10a, and
 7.4–7.7 remain open and are temporarily outside the active sequence, including
-the unfinished stage-timing work. Narrow checks needed to implement the new
-interface/package remain part of that work. See [UI_PLAN.md](UI_PLAN.md) for the
-proposal; the GUI and executable have not been implemented.
+the unfinished stage-timing work. The interface and personal macOS executable
+were implemented and validated; see [UI_PLAN.md](UI_PLAN.md) for their design
+and remaining distribution work.
 
 ## Module 1 — Audio input (implemented)
 
@@ -123,11 +124,11 @@ Completion criterion: “Jarvis, [question]” produces a spoken response and re
 
 ## After the MVP
 
-Actions and tools, integrations, persistent memory, and interruption during playback require separately scoped work. Review their data access and retention against the privacy requirement before implementation. A minimal status interface and desktop packaging are now the active planning scope in [UI_PLAN.md](UI_PLAN.md).
+Actions and tools, integrations, persistent memory, and interruption during playback require separately scoped work. Review their data access and retention against the privacy requirement before implementation. The proposed local tool boundary and optional provider integration are documented in [ACTIONS_PLAN.md](ACTIONS_PLAN.md). A minimal status interface and desktop packaging are documented in [UI_PLAN.md](UI_PLAN.md).
 
 ## Resume here
 
-**Next micro step: deferred validation review.** UI.1–UI.3 and APP.1–APP.3 now provide the status model, Qt window, typed worker service, resource resolver, PyInstaller spec, and `build_macos.sh`. PySide6 6.10.3 and PyInstaller 6.22.2 are installed in `.venv` on macOS ARM64 / Python 3.9. The user validated the 318 MB `Jarvis.app` through Finder with live microphone, bundled models, Ollama, state transitions, menu-bar controls, spoken output, and cleanup. Configuration consolidation is complete; the latest automated verification has 131 passing tests. The local personal build is unsigned. Broader validation in 2.3a, 2.10a, and 7.4–7.7 remains deferred by user request; recognition improvements remain future work.
+**Next micro step: deferred validation review.** UI.1–UI.3 and APP.1–APP.3 now provide the status model, Qt window, typed worker service, resource resolver, PyInstaller spec, and `build_macos.sh`. PySide6 6.10.3 and PyInstaller 6.22.2 are installed in `.venv` on macOS ARM64 / Python 3.9. The user validated the 318 MB `Jarvis.app` through Finder with live microphone, bundled models, Ollama, state transitions, menu-bar controls, spoken output, and cleanup. Configuration consolidation is complete; the latest automated verification has 131 passing tests. The local personal build is unsigned. Broader validation in 2.3a, 2.10a, and 7.4–7.7 remains deferred by user request; recognition improvements and the action/tool layer remain future work.
 
 
 ## Historical smoke observations

@@ -9,10 +9,11 @@ Microphone → Jarvis wake word → request capture / VAD → Whisper → Ollama
 The user confirmed the integrated pipeline works on 2026-09-10. MVP consolidation
 is in progress: configuration is centralized; shutdown/recovery review, stage
 latency reporting, extended stability, and complete offline/privacy validation
-remain pending and are deferred by user request. The current planning focus is
-a minimal status interface and desktop executable; see [UI_PLAN.md](UI_PLAN.md).
-The application currently runs through the CLI; no GUI or executable is delivered
-yet. See [PLAN.md](PLAN.md) for implementation milestones and deferred work.
+remain pending and are deferred by user request. The minimal status interface
+and local macOS executable are implemented and were validated by the user; see
+[UI_PLAN.md](UI_PLAN.md). The bundle still requires the separately managed local
+Ollama service. See [PLAN.md](PLAN.md) for implementation milestones and
+deferred work.
 
 Voice interaction is English-only. Code, documentation, and application messages
 are in English. Recognition quality and accent handling are accepted limitations
@@ -136,6 +137,21 @@ Input is stopped and queued audio discarded during the entire response cycle.
 Speech during transcription, LLM inference, synthesis, or playback is ignored.
 There is no interruption during playback, echo cancellation, or post-playback
 delay. Ctrl+C initiates cleanup, discards unfinished capture, and clears history.
+
+### Future actions and provider options
+
+The current assistant only answers through the local Ollama model. It cannot
+execute shell commands, open applications, read arbitrary files, or change the
+computer. A future tool layer will expose a small allowlist of typed local
+actions, enforce path and timeout limits, and require confirmation for
+reversible, destructive, or externally visible effects. See
+[ACTIONS_PLAN.md](ACTIONS_PLAN.md) for the proposed contracts, policy, tests,
+and UI `Working` state.
+
+OpenAI is a possible explicit provider for tool calling through the Responses
+API, but enabling it would send prompts and tool data off the computer and
+change Jarvis's current local-only privacy boundary. It will not be an automatic
+fallback for Ollama, and no API key is packaged in the app.
 
 Expected STT, LLM, synthesis, and playback errors restore listening when cleanup
 and microphone restart succeed. A failed response clears history so subsequent

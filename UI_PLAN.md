@@ -21,12 +21,15 @@ without relying on color or motion. The window does not steal focus on activatio
 | Waiting for the wake word | `Ready` | Steady, subdued circle |
 | Capturing the spoken request | `Listening` | Slowly expanding ring |
 | Transcribing, responding, synthesizing | `Thinking` | Slow rotating arc |
+| Executing an approved local action | `Working` | Restrained activity indicator |
 | Audio playback | `Speaking` | Soft rhythmic pulse |
 | Quit requested, cleanup in progress | `Stopping` | Steady subdued circle |
 | Startup or terminal failure | `Unavailable` | Static symbol and short actionable message |
 
 `Ready` means the microphone is monitoring for Jarvis; `Listening` means a
-request is being captured. `Thinking` makes the microphone-off interval visible.
+request is being captured. `Thinking` makes the microphone-off interval visible;
+`Working` will make an approved local tool execution visible once the action
+layer is implemented.
 Animations represent state, not measured audio levels. No transcripts, chat,
 history, waveform, dashboard, or settings screen are needed for this version.
 
