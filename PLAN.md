@@ -33,6 +33,13 @@ Build a privacy-first voice assistant: microphone → wake word → request capt
 
 Implement one small, verifiable step at a time. Record its outcome and the next step here. Test new behavior and meaningful failure cases; validate hardware separately. The initial wake-word demonstration prerequisite was met before subsequent pipeline integration.
 
+Priority change on 2026-09-10: the user deferred the validation work and requested
+planning for a minimal status interface and executable. Steps 2.3a, 2.10a, and
+7.4–7.7 remain open and are temporarily outside the active sequence, including
+the unfinished stage-timing work. Narrow checks needed to implement the new
+interface/package remain part of that work. See [UI_PLAN.md](UI_PLAN.md) for the
+proposal; the GUI and executable have not been implemented.
+
 ## Module 1 — Audio input (implemented)
 
 - [x] 1.1 Define audio configuration, device, PCM chunk, and input interface.
@@ -116,11 +123,11 @@ Completion criterion: “Jarvis, [question]” produces a spoken response and re
 
 ## After the MVP
 
-Actions and tools, integrations, persistent memory, interruption during playback, and a visual interface require separately scoped work. Review their data access and retention against the privacy requirement before implementation.
+Actions and tools, integrations, persistent memory, and interruption during playback require separately scoped work. Review their data access and retention against the privacy requirement before implementation. A minimal status interface and desktop packaging are now the active planning scope in [UI_PLAN.md](UI_PLAN.md).
 
 ## Resume here
 
-**Next micro step: 7.4 — review shutdown and module-error recovery.** The user confirmed the integrated voice pipeline works on 2026-09-10. Configuration consolidation is complete; all 121 tests pass. Existing shutdown/recovery behavior is implemented and covered in part; review remaining gaps before marking 7.4 complete. Extended stability validation and the final offline/privacy checks remain pending. Recognition improvements follow MVP consolidation.
+**Next micro step: UI.1 — refine the minimal interface proposal and build-runtime choice.** See [UI_PLAN.md](UI_PLAN.md). The proposed initial target is macOS Apple Silicon, pending platform preference. Configuration consolidation is complete; the last automated verification had 121 passing tests. Validation work in 2.3a, 2.10a, and 7.4–7.7 is deferred by user request and remains incomplete. Recognition improvements remain future work.
 
 
 ## Historical smoke observations

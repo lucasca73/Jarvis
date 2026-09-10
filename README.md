@@ -9,7 +9,10 @@ Microphone → Jarvis wake word → request capture / VAD → Whisper → Ollama
 The user confirmed the integrated pipeline works on 2026-09-10. MVP consolidation
 is in progress: configuration is centralized; shutdown/recovery review, stage
 latency reporting, extended stability, and complete offline/privacy validation
-remain pending. See [PLAN.md](PLAN.md) for implementation milestones and next work.
+remain pending and are deferred by user request. The current planning focus is
+a minimal status interface and desktop executable; see [UI_PLAN.md](UI_PLAN.md).
+The application currently runs through the CLI; no GUI or executable is delivered
+yet. See [PLAN.md](PLAN.md) for implementation milestones and deferred work.
 
 Voice interaction is English-only. Code, documentation, and application messages
 are in English. Recognition quality and accent handling are accepted limitations
@@ -299,5 +302,6 @@ Recorded single-run measurements on the development machine, not latency guarant
 | Ollama | 0.863 s for a response of 188 characters |
 | Piper | 0.265 s load; 0.104 s synthesis for 2.958 s of audio |
 
-Actions/tools, integrations, persistent memory, playback interruption, and a
-visual interface are outside the current MVP scope and require separate work.
+Actions/tools, integrations, persistent memory, and playback interruption require
+separate work. The minimal status interface and desktop executable are planned
+in [UI_PLAN.md](UI_PLAN.md).
