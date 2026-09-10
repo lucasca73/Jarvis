@@ -101,7 +101,7 @@ Completion criterion: the user hears the response and the assistant automaticall
 
 - [x] 7.1 Connected modules in `jarvis.app` with explicit dependencies. The runner stops input for the complete response cycle, skips empty recognition, recovers expected backend errors, and clears content/history on shutdown. All 118 tests pass. Real startup, microphone opening, and timed shutdown passed; the user confirmed the integrated voice pipeline works on 2026-09-10. Extended stability and offline/privacy checks remain separate work.
 - [x] 7.2 Added explicit waiting → capturing → transcribing → responding → synthesizing → speaking → waiting states with content-free reporting.
-- [ ] 7.3 Centralize device, model, endpoint, and limit configuration.
+- [x] 7.3 Centralize device, model, endpoint, and limit configuration. Added `AppConfig` and CLI overrides for devices, all model paths, wake-word/VAD settings, capture limits, and Ollama limits/history. Existing defaults and local-only endpoint restrictions are preserved. Invalid settings fail before backend startup. All 121 tests pass, including configuration propagation; hardware was not revalidated for this step.
 - [ ] 7.4 Support Ctrl+C shutdown and recovery from module errors.
 - [ ] 7.5 Log stage and timing metadata without recording audio or conversation content by default.
 - [ ] 7.6 Validate repeated interactions and document installation and execution in English.
@@ -115,7 +115,7 @@ Actions and tools, integrations, persistent memory, interruption during playback
 
 ## Resume here
 
-**Next micro step: 7.3 — consolidate configuration.** The user confirmed the integrated voice pipeline works on 2026-09-10. All 118 tests pass. Consolidated configuration, extended stability validation, and the final offline/privacy checks remain pending. Recognition improvements follow MVP consolidation.
+**Next micro step: 7.4 — review shutdown and module-error recovery.** The user confirmed the integrated voice pipeline works on 2026-09-10. Configuration consolidation is complete; all 121 tests pass. Existing shutdown/recovery behavior is implemented and covered in part; review remaining gaps before marking 7.4 complete. Extended stability validation and the final offline/privacy checks remain pending. Recognition improvements follow MVP consolidation.
 
 Resume verification on 2026-09-09: all 78 tests passed in `.venv`. The local STT diagnostic processed bundled sample 0 (6.625 seconds) with a nonempty result, 0.150-second model load, and 0.238-second inference. These are single-run measurements. At the time of this automated verification, live voice/accent validation was pending (subsequently accepted by the user): run `.venv/bin/python -m jarvis.capture.diagnostics --duration 90 --show-text`, try several English requests, then test activation without a request and silence. Transcript display is opt-in and audio is not saved by the diagnostic. The user subsequently confirmed it works, with recognition quality improvements deferred until after pipeline integration.
 

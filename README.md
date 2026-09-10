@@ -556,9 +556,32 @@ Use `--device ID` and `--output-device ID` for audio selection. `--model` and
 `--endpoint` configure Ollama; endpoint validation permits only literal loopback
 addresses. The separate Ollama service must still be configured for local-only
 operation as described below; the app does not establish the server's network
-behavior from the client's environment. Other backend settings currently use
-their existing defaults. `--duration 90` limits a session, checked between
+behavior from the client's environment. Application settings are centralized in `jarvis.config.AppConfig`; CLI
+overrides are validated before backend startup. `--duration 90` limits a session, checked between
 requests; an in-flight response may finish after the deadline.
+
+Configure capture limits and bounded conversation history, for example:
+
+```bash
+.venv/bin/python -m jarvis.app --device 2 --max-duration 10 --no-speech-timeout 2 --max-history-turns 2
+```
+
+Run `python -m jarvis.app --help` for all options. Model locations use
+`--wakeword-model-dir`, `--keywords-file`, `--vad-model`, `--stt-model-dir`,
+and `--tts-model-dir`. Relative paths resolve from the working directory;
+model bundles must retain the filenames expected by their adapters.
+`--threshold` controls wake-word sensitivity. Capture uses `--pre-roll`,
+`--no-speech-timeout`, `--max-duration`, and `--silence-hold` (seconds).
+VAD exposes `--vad-threshold`, `--vad-min-speech-duration`, and
+`--vad-min-silence-duration`. Ollama limits use `--timeout-seconds`,
+`--context-tokens`, `--max-response-tokens`, `--keep-alive-seconds`, and
+`--max-history-turns`. Existing defaults are preserved; zero history turns
+means independent requests. Input remains 16 kHz mono 16-bit PCM.
+
+The app does not read environment overrides for these settings or write a
+configuration file. Programmatic configuration groups the existing audio,
+wake-word, VAD, capture, and Ollama contracts. Paths are checked by the local
+adapters when loading models; CLI validation does not establish model compatibility.
 
 Console output contains states, request timing, and the stage that failed,
 without transcripts or answers. Empty STT skips the LLM and output. Recoverable

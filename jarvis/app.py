@@ -1,17 +1,16 @@
 """Local voice pipeline with explicit backend dependencies."""
 
-import argparse
 from contextlib import ExitStack
 from enum import Enum
 import math
 import sys
 from time import monotonic
 
-from jarvis.audio import AudioConfig, SoundDeviceAudioInput
-from jarvis.audio.diagnostics import parse_device
+from jarvis.audio import SoundDeviceAudioInput
+from jarvis.config import parse_config
 from jarvis.capture import CaptureController, CaptureState
 from jarvis.capture.playback import suspended_capture
-from jarvis.llm import LanguageModelError, OllamaConfig, OllamaLanguageModel, TextRequest
+from jarvis.llm import LanguageModelError, OllamaLanguageModel, TextRequest
 from jarvis.stt import SherpaWhisperTranscriber, TranscriptionError
 from jarvis.tts import AudioPlayerError, SynthesisError, SherpaPiperSynthesizer, SoundDeviceAudioPlayer
 from jarvis.vad import SileroVoiceActivityDetector
@@ -102,28 +101,21 @@ def run_assistant(source, controller, transcriber, model, synthesizer, player,
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--device', type=parse_device, help='microphone ID or name')
-    parser.add_argument('--output-device', type=parse_device)
-    parser.add_argument('--model', default='llama3.2:3b')
-    parser.add_argument('--endpoint', default='http://127.0.0.1:11434')
-    parser.add_argument('--duration', type=float, help='session seconds; finish an in-flight response')
-    args = parser.parse_args()
-    if args.duration is not None and (not math.isfinite(args.duration) or args.duration <= 0):
-        parser.error('--duration must be finite and positive')
+    config = parse_config()
     try:
-        config = OllamaConfig(model=args.model, endpoint=args.endpoint)
         with ExitStack() as stack:
-            wakeword = stack.enter_context(SherpaOnnxWakeWordDetector())
-            vad = stack.enter_context(SileroVoiceActivityDetector())
-            controller = CaptureController(wakeword, vad)
-            transcriber = stack.enter_context(SherpaWhisperTranscriber())
-            model = stack.enter_context(OllamaLanguageModel(config))
-            synth = stack.enter_context(SherpaPiperSynthesizer())
-            player = stack.enter_context(SoundDeviceAudioPlayer(args.output_device))
+            wakeword = stack.enter_context(SherpaOnnxWakeWordDetector(
+                config.wakeword_model_dir, config=config.wakeword, keywords_file=config.keywords_file))
+            vad = stack.enter_context(SileroVoiceActivityDetector(
+                config.vad_model, config=config.vad))
+            controller = CaptureController(wakeword, vad, config.capture)
+            transcriber = stack.enter_context(SherpaWhisperTranscriber(config.stt_model_dir))
+            model = stack.enter_context(OllamaLanguageModel(config.ollama))
+            synth = stack.enter_context(SherpaPiperSynthesizer(config.tts_model_dir))
+            player = stack.enter_context(SoundDeviceAudioPlayer(config.output_device))
             source = stack.enter_context(SoundDeviceAudioInput())
             run_assistant(source, controller, transcriber, model, synth, player,
-                          AudioConfig(device=args.device), duration=args.duration,
+                          config.audio, duration=config.duration,
                           report=lambda message: print(message, flush=True))
     except KeyboardInterrupt:
         print('Jarvis stopped.')
