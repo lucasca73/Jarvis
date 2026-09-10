@@ -220,6 +220,12 @@ Security → Microphone. The spec includes only runtime model files and
 the packaged Jarvis keyword file; it excludes archives, sample WAVs, and unused
 float model variants. Ollama and `llama3.2:3b` remain external prerequisites.
 
+The packaged binary passed `--help` and a two-second offscreen startup/cleanup
+smoke test after loading bundled resources. The user then validated the 318 MB
+bundle through Finder with live microphone, bundled models, Ollama, state
+transitions, menu-bar controls, spoken output, and cleanup. The personal build
+is unsigned; signing and notarization are future distribution work.
+
 - **Audio:** `AudioConfig`, `AudioDevice`, `AudioChunk`, and `AudioInput` describe
   input. `SoundDeviceDeviceCatalog` discovers microphones. `SoundDeviceAudioInput`
   captures 100 ms chunks by default, with a bounded queue. The integrated pipeline

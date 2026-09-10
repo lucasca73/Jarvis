@@ -127,7 +127,7 @@ Actions and tools, integrations, persistent memory, and interruption during play
 
 ## Resume here
 
-**Next micro step: APP.3 — exercise the local `Jarvis.app` bundle.** UI.1–UI.3 and APP.1–APP.2 now provide the status model, Qt window, typed worker service, resource resolver, PyInstaller spec, and `build_macos.sh`. PySide6 6.10.3 and PyInstaller 6.22.2 are installed in `.venv` on macOS ARM64 / Python 3.9. The user manually validated interface states during operation, including listening and speaking; a 318 MB onedir bundle was built successfully and its packaged binary passed `--help`. Finder launch with live backends remains pending. Configuration consolidation is complete; the latest automated verification has 131 passing tests. Broader validation in 2.3a, 2.10a, and 7.4–7.7 is deferred by user request and remains incomplete. Recognition improvements remain future work.
+**Next micro step: deferred validation review.** UI.1–UI.3 and APP.1–APP.3 now provide the status model, Qt window, typed worker service, resource resolver, PyInstaller spec, and `build_macos.sh`. PySide6 6.10.3 and PyInstaller 6.22.2 are installed in `.venv` on macOS ARM64 / Python 3.9. The user validated the 318 MB `Jarvis.app` through Finder with live microphone, bundled models, Ollama, state transitions, menu-bar controls, spoken output, and cleanup. Configuration consolidation is complete; the latest automated verification has 131 passing tests. The local personal build is unsigned. Broader validation in 2.3a, 2.10a, and 7.4–7.7 remains deferred by user request; recognition improvements remain future work.
 
 
 ## Historical smoke observations

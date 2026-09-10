@@ -138,19 +138,22 @@ step if sharing the application becomes a requirement.
   PyInstaller one-file/macOS-bundle deprecation warning; the spec now uses the
   recommended onedir `COLLECT` layout. Signing/notarization and permission
   review remain APP.3 work. A local build completed successfully.
-- [ ] APP.3 Check the artifact's basic usability: open through Finder outside
+- [x] APP.3 Check the artifact's basic usability: open through Finder outside
   the repository, observe real state transitions, hide/show, and quit with cleanup.
-  The 318 MB local bundle runs its packaged binary with `--help`; a Finder launch
-  with microphone, models, Ollama, and menu-bar behavior remains. The bundle
-  declares `NSMicrophoneUsageDescription`; macOS should prompt on first capture,
-  and the user can later review it under System Settings → Privacy & Security →
-  Microphone. Record prerequisites, signing state, artifact size, and limitations.
+  The 318 MB local bundle runs its packaged binary with `--help` and completed a
+  two-second offscreen startup/cleanup smoke test with bundled model assets. A
+  Finder launch was then validated by the user with microphone, bundled models,
+  Ollama, state transitions, menu-bar controls, spoken output, and cleanup. The
+  bundle declares `NSMicrophoneUsageDescription`; macOS permission handling was
+  confirmed. The local build is unsigned; signing/notarization remains a future
+  distribution step.
 
 These narrow implementation checks accompany the new feature. The broader
 existing validation campaign is deferred, not marked complete: platform matrix,
 false activations, shutdown/recovery audit, stage timings, extended stability,
 clean setup replay, and complete offline/privacy audit remain in PLAN.md.
 
-Completion criterion: open Jarvis.app, see the actual listening/processing/speaking
-state without conversation content, and quit through the interface with resource
-cleanup. No terminal is required for normal use once local prerequisites are set up.
+Completion criterion met for the personal macOS build: open Jarvis.app, see the
+actual listening/processing/speaking state without conversation content, and quit
+through the interface with resource cleanup. No terminal is required for normal
+use once local prerequisites are set up.
