@@ -127,7 +127,7 @@ Actions and tools, integrations, persistent memory, and interruption during play
 
 ## Resume here
 
-**Next micro step: UI.2 — expose typed state/error events and cooperative shutdown through a shared application service.** UI.1 produced the GUI-independent status model and an optional Qt window skeleton. PySide6 6.10.3 and PyInstaller 6.22.2 are installed in `.venv` on macOS ARM64 / Python 3.9; the window has not yet been launched. Configuration consolidation is complete; the latest automated verification has 126 passing tests. Validation work in 2.3a, 2.10a, and 7.4–7.7 is deferred by user request and remains incomplete. Recognition improvements remain future work.
+**Next micro step: APP.1 — make packaged model resources independent of the working directory.** UI.1–UI.3 now provide the status model, optional Qt window, typed worker service, and `python -m jarvis.ui.main` entry point. PySide6 6.10.3 and PyInstaller 6.22.2 are installed in `.venv` on macOS ARM64 / Python 3.9. The user manually validated the interface states during operation, including listening and speaking; no packaged executable exists yet. Configuration consolidation is complete; the latest automated verification has 129 passing tests. Broader validation in 2.3a, 2.10a, and 7.4–7.7 is deferred by user request and remains incomplete. Recognition improvements remain future work.
 
 
 ## Historical smoke observations

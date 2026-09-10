@@ -193,6 +193,14 @@ jarvis/
 concrete components and manages their lifetimes. It can also publish
 content-free state callbacks and receive a cooperative stop request, which the
 desktop service will use. Contracts remain separate from backend implementations.
+`AssistantService` in `jarvis.service` runs this executor on a worker thread and
+publishes typed content-free state, failure, and stopped events. Qt signal/slot
+integration is available through `.venv/bin/python -m jarvis.ui.main`; the user
+manually validated the listening and speaking states during operation. The
+packaged desktop entry point remains under construction. The GUI requires
+PySide6 and local model assets, and still requires the separately managed Ollama
+service. It does not play an acknowledgement when the wake word is detected;
+output audio starts after a completed request reaches the speaking stage.
 
 - **Audio:** `AudioConfig`, `AudioDevice`, `AudioChunk`, and `AudioInput` describe
   input. `SoundDeviceDeviceCatalog` discovers microphones. `SoundDeviceAudioInput`
@@ -268,6 +276,9 @@ The diagnostic adds a silence tail to flush features. Sample 0 previously produc
 keywords, not Jarvis recognition. STT WAV input also requires 16 kHz mono 16-bit PCM.
 
 ### Manual validation still needed
+
+The interface state transitions have been manually validated during operation,
+including listening and speaking. The following broader checks remain pending:
 
 1. Observe silence and unrelated speech for false activations; repeat Jarvis requests.
 2. Say only “Jarvis” and verify no-speech cancellation. Compare immediate short

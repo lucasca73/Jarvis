@@ -1,8 +1,9 @@
 # Minimal interface and desktop application plan
 
-Planning draft, 2026-09-10. The user requested a minimal listening/speaking
-indicator and an executable, with the existing validation work deferred.
-No GUI or packaged executable is implemented yet.
+Updated 2026-09-10. The user requested a minimal listening/speaking indicator
+and an executable, with the broader validation work deferred. The status GUI is
+implemented and its live states were manually validated; no packaged executable
+exists yet.
 
 ## Scope and proposed experience
 
@@ -37,7 +38,7 @@ instance rather than opening another microphone session.
 
 ## Technical approach
 
-Propose PySide6 with Qt Widgets for the small window and menu-bar integration,
+Use PySide6 with Qt Widgets for the small window and menu-bar integration,
 and PyInstaller for packaging. Qt documents macOS support for its
 [system tray/status icon](https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QSystemTrayIcon.html),
 and PyInstaller supports [windowed macOS app bundles](https://pyinstaller.org/en/stable/usage.html).
@@ -107,13 +108,23 @@ step if sharing the application becomes a requirement.
   a small simulated-state prototype to assess the indicator and labels. Added
   the toolkit-independent `jarvis.ui.status` model and an optional Qt window
   skeleton. PySide6 6.10.3 and PyInstaller 6.22.2 are installed in the current
-  `.venv` on macOS ARM64 / Python 3.9. The Qt window has not been launched.
-- [ ] UI.2 Expose typed state/error events and cooperative shutdown through a
-  shared application service; retain CLI behavior. The current runner now
-  accepts `on_state` and `stop_requested` callbacks, checked between stages;
-  extracting the reusable worker/service and typed error events remains.
-- [ ] UI.3 Connect the window and menu-bar indicator to the worker, including
-  initialization, failures, quit behavior, and a single running instance.
+  `.venv` on macOS ARM64 / Python 3.9. The window was created successfully in
+  an offscreen Qt smoke test; it has not been launched as a visible desktop app.
+- [x] UI.2 Expose typed state/error events and cooperative shutdown through a
+  shared application service; retain CLI behavior. Added `AssistantService`,
+  `AssistantEvent`, and a worker thread that publishes content-free state,
+  failure, and stopped events. The runner accepts `on_state` and
+  `stop_requested`, checked between stages. Qt signal/slot queuing remains in
+  UI.3 because the service has no toolkit dependency.
+- [x] UI.3 Connect the window and menu-bar indicator to the worker, including
+  initialization, failures, and quit behavior. Added `python -m jarvis.ui.main`:
+  Qt remains on the main thread, `AssistantService` runs local backends on its
+  worker, and queued signals update the content-free status view. Single-instance
+  handling and a launched-window check remain in APP.3/UI follow-up validation.
+  Manual validation confirmed the live interface transitions through listening
+  and speaking behavior as expected. The interface intentionally produces no
+  audible wake-word acknowledgement; output audio occurs after a completed
+  request reaches the speaking stage.
 - [ ] APP.1 Resolve packaged resources independently of the working directory
   and define exactly which model/runtime assets the bundle contains.
 - [ ] APP.2 Create a reproducible PyInstaller specification and build command;
