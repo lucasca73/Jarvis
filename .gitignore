@@ -7,6 +7,9 @@ models/
 .venv/
 .venv/*
 .venv
+dist/
+dist
+dist*
 __pycache__/
 *.py[cod]
 
