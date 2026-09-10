@@ -3,9 +3,10 @@
 from pathlib import Path
 
 from jarvis.llm import TextResponse
+from jarvis.resources import runtime_path
 from jarvis.tts.contracts import SynthesizedAudio, Synthesizer, SynthesisError
 
-DEFAULT_MODEL_DIR = Path('models/tts/vits-piper-en_US-lessac-medium')
+DEFAULT_MODEL_DIR = runtime_path('models/tts/vits-piper-en_US-lessac-medium')
 
 
 class SherpaPiperSynthesizer(Synthesizer):

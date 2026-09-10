@@ -5,10 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from jarvis.audio import AudioChunk
+from jarvis.resources import runtime_path
 from jarvis.wakeword.detector import WakeWordDetector
 from jarvis.wakeword.models import WakeWordConfig, WakeWordDetection
 
-DEFAULT_MODEL_DIR = Path("models/wakeword/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01")
+DEFAULT_MODEL_DIR = runtime_path("models/wakeword/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01")
 DEFAULT_KEYWORDS = Path(__file__).with_name("keywords.txt")
 
 

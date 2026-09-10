@@ -202,6 +202,24 @@ PySide6 and local model assets, and still requires the separately managed Ollama
 service. It does not play an acknowledgement when the wake word is detected;
 output audio starts after a completed request reaches the speaking stage.
 
+Runtime model defaults resolve from the repository working directory in source
+mode and from PyInstaller's bundled resource directory in packaged mode. This
+keeps the normal CLI path overrides while allowing `Jarvis.app` to launch from
+Finder without relying on the current directory.
+
+To build the first local macOS bundle after installing `.[gui,bundle]`:
+
+```bash
+./build_macos.sh
+```
+
+The result is `dist/Jarvis.app`. Its bundle metadata declares the macOS
+microphone usage description, so macOS asks for permission when Jarvis first
+opens the microphone. Manage a later decision in System Settings → Privacy &
+Security → Microphone. The spec includes only runtime model files and
+the packaged Jarvis keyword file; it excludes archives, sample WAVs, and unused
+float model variants. Ollama and `llama3.2:3b` remain external prerequisites.
+
 - **Audio:** `AudioConfig`, `AudioDevice`, `AudioChunk`, and `AudioInput` describe
   input. `SoundDeviceDeviceCatalog` discovers microphones. `SoundDeviceAudioInput`
   captures 100 ms chunks by default, with a bounded queue. The integrated pipeline

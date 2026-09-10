@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from jarvis.capture import AudioRequest
+from jarvis.resources import runtime_path
 from jarvis.stt.transcriber import Transcriber, TranscriptionError, TranscriptionResult
 
-DEFAULT_MODEL_DIR = Path("models/stt/sherpa-onnx-whisper-tiny.en")
+DEFAULT_MODEL_DIR = runtime_path("models/stt/sherpa-onnx-whisper-tiny.en")
 
 
 class SherpaWhisperTranscriber(Transcriber):

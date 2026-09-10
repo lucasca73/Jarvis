@@ -125,13 +125,26 @@ step if sharing the application becomes a requirement.
   and speaking behavior as expected. The interface intentionally produces no
   audible wake-word acknowledgement; output audio occurs after a completed
   request reaches the speaking stage.
-- [ ] APP.1 Resolve packaged resources independently of the working directory
-  and define exactly which model/runtime assets the bundle contains.
-- [ ] APP.2 Create a reproducible PyInstaller specification and build command;
+- [x] APP.1 Resolve packaged resources independently of the working directory
+  and define exactly which model/runtime assets the bundle contains. Added
+  `jarvis.resources.runtime_path`; source defaults use the working directory and
+  PyInstaller builds use `_MEIPASS`. The spec includes only runtime ONNX,
+  phonemizer, tokens, and packaged keyword assets; archives, sample WAVs, and
+  unused float model variants are excluded.
+- [x] APP.2 Create a reproducible PyInstaller specification and build command;
   produce a local `Jarvis.app` with app metadata and microphone permission support.
+  Added `Jarvis.spec` and `build_macos.sh`, targeting a windowed directory-based
+  macOS bundle with identifier `com.jarvis.local`. The first build exposed a
+  PyInstaller one-file/macOS-bundle deprecation warning; the spec now uses the
+  recommended onedir `COLLECT` layout. Signing/notarization and permission
+  review remain APP.3 work. A local build completed successfully.
 - [ ] APP.3 Check the artifact's basic usability: open through Finder outside
   the repository, observe real state transitions, hide/show, and quit with cleanup.
-  Record prerequisites, build environment, artifact size, and limitations.
+  The 318 MB local bundle runs its packaged binary with `--help`; a Finder launch
+  with microphone, models, Ollama, and menu-bar behavior remains. The bundle
+  declares `NSMicrophoneUsageDescription`; macOS should prompt on first capture,
+  and the user can later review it under System Settings → Privacy & Security →
+  Microphone. Record prerequisites, signing state, artifact size, and limitations.
 
 These narrow implementation checks accompany the new feature. The broader
 existing validation campaign is deferred, not marked complete: platform matrix,

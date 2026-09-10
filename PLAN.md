@@ -4,7 +4,7 @@ Updated on 2026-09-10 against the implemented pipeline and configuration. Origin
 reconstructed on 2026-09-09 from the repository and user-confirmed decisions.
 Checked items record completed implementation milestones; test counts within
 those items are historical results at that step, not the current suite size.
-The current suite has 121 passing tests. Hardware observations below are prior
+The current suite has 131 passing tests. Hardware observations below are prior
 validation, not new validation performed during this documentation review.
 
 ## Objective and confirmed decisions
@@ -127,7 +127,7 @@ Actions and tools, integrations, persistent memory, and interruption during play
 
 ## Resume here
 
-**Next micro step: APP.1 — make packaged model resources independent of the working directory.** UI.1–UI.3 now provide the status model, optional Qt window, typed worker service, and `python -m jarvis.ui.main` entry point. PySide6 6.10.3 and PyInstaller 6.22.2 are installed in `.venv` on macOS ARM64 / Python 3.9. The user manually validated the interface states during operation, including listening and speaking; no packaged executable exists yet. Configuration consolidation is complete; the latest automated verification has 129 passing tests. Broader validation in 2.3a, 2.10a, and 7.4–7.7 is deferred by user request and remains incomplete. Recognition improvements remain future work.
+**Next micro step: APP.3 — exercise the local `Jarvis.app` bundle.** UI.1–UI.3 and APP.1–APP.2 now provide the status model, Qt window, typed worker service, resource resolver, PyInstaller spec, and `build_macos.sh`. PySide6 6.10.3 and PyInstaller 6.22.2 are installed in `.venv` on macOS ARM64 / Python 3.9. The user manually validated interface states during operation, including listening and speaking; a 318 MB onedir bundle was built successfully and its packaged binary passed `--help`. Finder launch with live backends remains pending. Configuration consolidation is complete; the latest automated verification has 131 passing tests. Broader validation in 2.3a, 2.10a, and 7.4–7.7 is deferred by user request and remains incomplete. Recognition improvements remain future work.
 
 
 ## Historical smoke observations

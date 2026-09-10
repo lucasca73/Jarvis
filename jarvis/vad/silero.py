@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from jarvis.audio import AudioChunk
+from jarvis.resources import runtime_path
 from jarvis.vad.detector import VadConfig, VoiceActivity, VoiceActivityDetector
 
-DEFAULT_MODEL_PATH = Path('models/vad/silero_vad.onnx')
+DEFAULT_MODEL_PATH = runtime_path('models/vad/silero_vad.onnx')
 
 
 class SileroVoiceActivityDetector(VoiceActivityDetector):

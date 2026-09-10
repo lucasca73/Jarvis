@@ -9,3 +9,8 @@ models/
 .venv
 __pycache__/
 *.py[cod]
+
+# Local PyInstaller intermediates and bundles.
+build/
+dist/
+.DS_Store
