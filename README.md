@@ -1,156 +1,252 @@
 # JARVIS
 
-A privacy-first voice-activated personal assistant.
-
-The planned voice pipeline runs locally, using sherpa-onnx for wake-word
-detection and local Ollama for LLM inference. Privacy is the primary
-requirement: audio and conversation content stay in memory by default, with
-no cloud fallback. Project code and documentation are written in English.
-
-See [the implementation plan](PLAN.md) for confirmed decisions, current
-progress, and the next micro step.
+A privacy-first voice assistant with an implemented local voice pipeline:
 
 ```text
-Audio → wake-word detection → transcription → LLM → voice response
+Microphone → Jarvis wake word → request capture / VAD → Whisper → Ollama → Piper → speakers
 ```
 
-## Current structure
+The user confirmed the integrated pipeline works on 2026-09-10. MVP consolidation
+is in progress: configuration is centralized; shutdown/recovery review, stage
+latency reporting, extended stability, and complete offline/privacy validation
+remain pending. See [PLAN.md](PLAN.md) for implementation milestones and next work.
 
-```text
-jarvis/
-├── __init__.py
-├── app.py             # application entry point
-├── audio/             # cross-platform microphone capture
-├── wakeword/          # local wake-word detection
-├── capture/           # spoken-request contracts and pre-roll buffer
-└── vad/               # local voice activity detection
-```
+Voice interaction is English-only. Code, documentation, and application messages
+are in English. Recognition quality and accent handling are accepted limitations
+for this stage; improvements follow MVP consolidation.
 
-The project uses Python 3.9 or later. Its current dependency is `sounddevice`
-for cross-platform microphone access.
+## Requirements and installation
 
-The audio module currently exposes these contracts:
+The package declares Python 3.9 or later. The development environment validated
+so far is macOS ARM64, Python 3.9, Apple M4 with 16 GB RAM. Other Python versions
+and platforms have not been validated. Microphone access and an output device
+are needed for live use.
 
-- `AudioConfig`: PCM input settings, with 16 kHz mono audio as the default.
-- `AudioDevice`: an available input device.
-- `AudioChunk`: a timestamped in-memory PCM segment.
-- `AudioInput`: the abstract interface that an audio backend must implement.
-
-It also provides `SoundDeviceDeviceCatalog` to list input devices and identify
-the operating system's default microphone. The `sounddevice` dependency is
-installed with the project dependencies:
-
-```bash
-python3 -m pip install -e .
-```
-
-`SoundDeviceAudioInput` captures signed 16-bit PCM in memory and returns
-100-millisecond `AudioChunk` values by default. It does not write raw audio to
-disk.
-
-Hardware capture was validated with a real input device. The audio backend
-correctly listed the device, opened a 16 kHz mono stream, received a
-100-millisecond PCM chunk, and released the stream without persisting audio.
-
-### Audio diagnostics
-
-List available input devices without opening the microphone:
-
-```bash
-python3 -m jarvis.audio.diagnostics --list-devices
-```
-
-Open the default microphone for five seconds and show its live signal level.
-Audio remains in memory and is discarded after each chunk:
-
-```bash
-python3 -m jarvis.audio.diagnostics
-```
-
-To select a device and change the duration:
-
-```bash
-python3 -m jarvis.audio.diagnostics --device 2 --duration 10
-```
-
-## Wake-word detection
-
-The wake-word module currently defines local detection contracts only:
-
-- `WakeWordConfig`: the activation phrase and confidence threshold.
-- `WakeWordDetection`: a timestamped activation event.
-- `WakeWordDetector`: the interface for a future local detector backend.
-
-The first backend will detect `jarvis` locally from the in-memory PCM chunks
-produced by the audio module.
-
-### sherpa-onnx backend
-
-`SherpaOnnxWakeWordDetector` runs keyword spotting locally on CPU using the
-English GigaSpeech Zipformer model. It consumes 16 kHz mono 16-bit PCM and
-reports activation events with `confidence=None`, since this backend does
-not expose a confidence score. The threshold controls the backend trigger.
-
-Install in a project virtual environment:
+From the repository root:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install -e ".[wakeword]"
+.venv/bin/python -m pip install -e ".[wakeword,vad,tts]"
 ```
 
-The model directory defaults to
-`models/wakeword/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01/`
-relative to the working directory. Use `--model-dir` to override it. The
-adapter uses the int8 encoder and joiner, the float decoder, and `tokens.txt`.
-The bundled `jarvis/wakeword/keywords.txt` was generated from `JARVIS` with
-this model's SentencePiece BPE model (`▁JA R VI S @jarvis`). SentencePiece is
-only needed to prepare new keywords, not during normal operation.
+`sounddevice>=0.5,<1` is the base dependency. The three extras currently share
+`sherpa-onnx==1.13.7` and `numpy>=1.23,<3`; they cover the complete local audio
+inference pipeline, including STT. There is no separate `stt` extra.
+Ollama is a separately installed and managed service.
 
-#### Live Jarvis voice test
+### Local models
 
-After installing the wakeword extra and downloading the model, run this
-command from the project root to listen through the default microphone for
-30 seconds:
+Download models during setup, then run with local files. Model assets are
+ignored by Git and are not included in the Python package. Run these commands
+from the repository root if the bundles are not already installed:
 
 ```bash
-.venv/bin/python -m jarvis.wakeword.diagnostics --duration 30
+mkdir -p models/wakeword models/vad models/stt models/tts
+curl -fL https://github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2 -o models/wakeword/model.tar.bz2
+tar -xjf models/wakeword/model.tar.bz2 -C models/wakeword
+curl -fL https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx -o models/vad/silero_vad.onnx
+curl -fL https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2 -o models/stt/model.tar.bz2
+tar -xjf models/stt/model.tar.bz2 -C models/stt
+curl -fL https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-medium.tar.bz2 -o models/tts/model.tar.bz2
+tar -xjf models/tts/model.tar.bz2 -C models/tts
 ```
 
-When `Listening locally` appears, say **“Jarvis”** clearly. A successful
-activation prints:
+Model sources: [sherpa-onnx keyword models](https://k2-fsa.github.io/sherpa/onnx/kws/pretrained_models/index.html),
+[Silero VAD](https://k2-fsa.github.io/sherpa/onnx/vad/silero-vad.html),
+[Whisper tiny.en](https://k2-fsa.github.io/sherpa/onnx/pretrained_models/whisper/tiny.en.html),
+and [Piper Lessac](https://k2-fsa.github.io/sherpa/onnx/tts/all/English/vits-piper-en_US-lessac-medium.html).
+
+| Stage | Default path | Required assets |
+| --- | --- | --- |
+| Wake word | `models/wakeword/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01/` | `encoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx`, `decoder-epoch-12-avg-2-chunk-16-left-64.onnx`, `joiner-epoch-12-avg-2-chunk-16-left-64.int8.onnx`, `tokens.txt` |
+| VAD | `models/vad/silero_vad.onnx` | Silero ONNX file |
+| STT | `models/stt/sherpa-onnx-whisper-tiny.en/` | `tiny.en-encoder.int8.onnx`, `tiny.en-decoder.int8.onnx`, `tiny.en-tokens.txt` |
+| TTS | `models/tts/vits-piper-en_US-lessac-medium/` | `en_US-lessac-medium.onnx`, `tokens.txt`, complete `espeak-ng-data/` |
+
+Jarvis uses its packaged `jarvis/wakeword/keywords.txt`, containing
+`▁JA R VI S @jarvis`, rather than the downloaded example keywords. A custom
+keyword file must use the model's token syntax. SentencePiece is needed only
+when preparing new BPE keywords, not for normal inference.
+
+Recorded local SHA-256 values (not publisher-authenticated checksums):
+
+- Silero model: `9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6`.
+- Piper archive: `9e3febfacf0abf4270172d2958bcec246032b7e88efc2720840cc80c93de334e`.
+
+### Ollama setup and privacy boundary
+
+Install Ollama separately and download the selected model during setup:
+
+```bash
+ollama pull llama3.2:3b
+```
+
+Configure the Ollama server with `OLLAMA_NO_CLOUD=1` and restart it. For the
+macOS application, run `launchctl setenv OLLAMA_NO_CLOUD 1` before restarting
+Ollama. For a manually managed server, start it with
+`OLLAMA_NO_CLOUD=1 ollama serve`. See the [official Ollama FAQ](https://docs.ollama.com/faq)
+for service-specific environment configuration.
+
+Jarvis connects directly to `http://127.0.0.1:11434` by default. Its client
+accepts only HTTP literal loopback addresses (`127.0.0.1` or `::1`), ignores
+proxy environment variables, rejects redirects, and rejects model names
+containing `cloud` or `/`. It does not download models or provide remote fallback.
+These checks cannot establish the behavior of a separately managed server or
+an aliased model.
+
+Audio, transcripts, prompts, responses, and bounded conversation history remain
+in application memory by default. Normal application output contains operational
+metadata, not conversation content. Selected diagnostics expose text only with
+`--show-text`. Jarvis does not implement a network sandbox, and the complete
+pipeline has not yet undergone the offline/network/persistence audit in step 7.7.
+
+Run the standalone client configuration check:
+
+```bash
+OLLAMA_NO_CLOUD=1 .venv/bin/python -m jarvis.llm.privacy_diagnostics
+```
+
+This command checks default client settings and the diagnostic process's own
+environment. It makes no server request, does not inspect the Ollama process,
+and does not read the app's CLI overrides. A passing result does not establish
+that cloud features are disabled in the running server. The app does not
+automatically run this diagnostic or require this environment variable itself.
+
+## Run the assistant
+
+With the models installed and the configured Ollama service running:
+
+```bash
+.venv/bin/python -m jarvis.app
+```
+
+After `state=waiting`, say “Jarvis, why is the sky blue?” The application captures
+the request, transcribes it, generates and speaks an answer, and returns to
+waiting. Its states are waiting → capturing → transcribing → responding →
+synthesizing → speaking → waiting; empty recognition skips the response stages.
+
+Input is stopped and queued audio discarded during the entire response cycle.
+Speech during transcription, LLM inference, synthesis, or playback is ignored.
+There is no interruption during playback, echo cancellation, or post-playback
+delay. Ctrl+C initiates cleanup, discards unfinished capture, and clears history.
+
+Expected STT, LLM, synthesis, and playback errors restore listening when cleanup
+and microphone restart succeed. A failed response clears history so subsequent
+turns do not assume the answer was heard. Device, unexpected backend, and cleanup
+failures terminate the session. These paths have automated coverage; additional
+shutdown/recovery review and real hardware disconnect tests remain pending.
+
+### Configuration
+
+`jarvis.config.AppConfig` groups the existing backend configuration contracts.
+`parse_config` applies CLI overrides and validates settings before backend
+startup. Adapters check model files when loading. Relative paths resolve from
+the working directory; path overrides do not change expected bundle filenames.
+The app does not read a configuration file or environment overrides for these
+settings. Backend defaults remain the source of default values.
+
+```bash
+.venv/bin/python -m jarvis.app --help
+.venv/bin/python -m jarvis.app --device 2 --max-duration 10 --no-speech-timeout 2 --max-history-turns 2
+```
+
+| Options | Defaults / meaning |
+| --- | --- |
+| `--device`, `--output-device` | System defaults; accept device IDs or names |
+| `--duration` | Unlimited session; positive seconds, checked between requests; an in-flight response can finish after the deadline |
+| `--wakeword-model-dir`, `--keywords-file`, `--vad-model`, `--stt-model-dir`, `--tts-model-dir` | Paths listed above; packaged Jarvis keywords |
+| `--threshold` | Wake-word trigger 0.35; lower values increase recall and potential false activations; not a confidence probability |
+| `--pre-roll`, `--no-speech-timeout`, `--max-duration`, `--silence-hold` | 0.5, 3, 15, 0.5 seconds respectively; positive; no-speech timeout cannot exceed maximum duration |
+| `--vad-threshold`, `--vad-min-speech-duration`, `--vad-min-silence-duration` | 0.5, 0.25 s, 0.5 s |
+| `--model`, `--endpoint` | `llama3.2:3b`, `http://127.0.0.1:11434` |
+| `--timeout-seconds`, `--context-tokens`, `--max-response-tokens` | 30, 2048, 100 |
+| `--keep-alive-seconds`, `--max-history-turns` | 600, 4; zero history turns selects independent requests |
+
+The Ollama timeout bounds individual blocking socket operations, not total
+response time. The response token limit may truncate answers. Closing Jarvis
+clears its history but does not explicitly unload the shared Ollama model.
+
+## Components and contracts
 
 ```text
-Wake word detected: jarvis
+jarvis/
+├── app.py       # orchestration, states, resource ownership
+├── config.py    # application configuration and CLI
+├── audio/       # devices, PCM contracts, microphone input
+├── wakeword/    # sherpa-onnx keyword spotting and packaged keywords
+├── vad/         # Silero speech activity decisions
+├── capture/     # pre-roll, request controller, microphone suspension
+├── stt/         # Whisper transcription
+├── llm/         # Ollama client, bounded history, configuration audit
+└── tts/         # Piper synthesis and sounddevice playback
 ```
 
-Pause briefly and say “Jarvis” again to check another activation. The command
-exits after 30 seconds; press Ctrl+C to stop early. This diagnostic only
-reports wake-word events; it does not transcribe a request or speak a reply.
-Audio is processed locally in memory and is not saved.
+`run_assistant` accepts injected backend dependencies; `main()` constructs the
+concrete components and manages their lifetimes. Contracts remain separate
+from backend implementations.
 
-To find the microphone device ID:
+- **Audio:** `AudioConfig`, `AudioDevice`, `AudioChunk`, and `AudioInput` describe
+  input. `SoundDeviceDeviceCatalog` discovers microphones. `SoundDeviceAudioInput`
+  captures 100 ms chunks by default, with a bounded queue. The integrated pipeline
+  requires 16 kHz mono signed 16-bit PCM.
+- **Wake word:** `WakeWordConfig`, `WakeWordDetection`, and `WakeWordDetector`
+  define activation. `SherpaOnnxWakeWordDetector` processes incremental audio on
+  CPU and emits events with `confidence=None`; reset discards decoder state.
+- **VAD:** `SileroVoiceActivityDetector` consumes complete 512-sample windows
+  (32 ms), buffers partial windows, and returns debounced `VoiceActivity` values.
+  Reset discards partial audio and speech state. Native completed segments are
+  discarded; its 30-second buffer and 20-second segment splitting are internal.
+- **Capture:** `PreRollBuffer` retains recent PCM on frame boundaries.
+  `CaptureController.process` returns an `AudioRequest` on completion or `None`
+  while waiting, capturing, or cancelling. Requests include pre-roll and trailing
+  silence. Timeouts measure audio samples; maximum duration excludes pre-roll
+  and trims precisely to a PCM frame. Silence/no-speech checks use chunk boundaries.
+- **STT:** `SherpaWhisperTranscriber` implements `Transcriber` with English int8
+  Whisper tiny.en on CPU and two threads. `TranscriptionResult.is_empty` distinguishes
+  empty recognition from failure; exact-zero PCM skips inference.
+- **LLM:** `OllamaLanguageModel` implements `LanguageModel` with nonempty
+  `TextRequest` and `TextResponse` values. History retains up to four successful
+  user/assistant turns; `reset()` and `close()` clear it. Failed turns are not retained.
+- **TTS:** `SherpaPiperSynthesizer` implements `Synthesizer` with the English
+  Lessac voice, CPU, two threads, speaker 0, and speed 1.0. It produces in-memory
+  mono signed 16-bit little-endian PCM at 22,050 Hz. `SoundDeviceAudioPlayer`
+  implements blocking playback and releases the output stream afterward.
 
-```bash
-.venv/bin/python -m jarvis.audio.diagnostics --list-devices
-```
+Activation/pre-roll audio is retained for STT but excluded from VAD speech
+qualification. A short command entirely within that audio can be missed.
+The default silence hold adds 0.5 seconds after VAD's 0.5-second debounce,
+so endpoint delay is approximately one second plus window/chunk rounding.
+Requests longer than the native VAD segment limit need joint validation with
+custom capture settings. Sample-based timeouts cannot advance without audio.
 
-Use `--device 2` to select a microphone or `--threshold 0.35` to adjust the
-trigger threshold. The default is 0.35; higher thresholds make activation harder
-and lower thresholds increase recall while allowing more false activations. For example,
-replace `2` with an input device ID from the list:
+## Diagnostics
 
-```bash
-.venv/bin/python -m jarvis.wakeword.diagnostics --device 2 --duration 30
-```
+Run commands from the repository root with their required local models installed.
+Each diagnostic has its own CLI; application options are not shared automatically.
 
-The user validated live Jarvis detection and reported satisfactory
-sensitivity on 2026-09-09. Accent-related recognition limitations are accepted
-for the current stage. Explicit checks for silence, unrelated speech, and
-repeated activations remain follow-up work.
+| Purpose | Command |
+| --- | --- |
+| List microphones | `.venv/bin/python -m jarvis.audio.diagnostics --list-devices` |
+| Audio levels for five seconds | `.venv/bin/python -m jarvis.audio.diagnostics` |
+| Wake-word events only | `.venv/bin/python -m jarvis.wakeword.diagnostics --duration 30` |
+| Capture and transcribe requests | `.venv/bin/python -m jarvis.capture.diagnostics --duration 90` |
+| Capture with transcript display | `.venv/bin/python -m jarvis.capture.diagnostics --duration 90 --show-text` |
+| Test microphone suspension with a fixed spoken confirmation | `.venv/bin/python -m jarvis.capture.diagnostics --duration 90 --speak-confirmation` |
+| Transcribe a local WAV | `.venv/bin/python -m jarvis.stt.diagnostics path/to/request.wav` |
+| Fixed LLM prompt | `.venv/bin/python -m jarvis.llm.diagnostics` |
+| Generate and play a fixed sentence | `.venv/bin/python -m jarvis.tts.diagnostics --play` |
 
-#### Offline sample test
+Capture diagnostics require wake-word, VAD, and Whisper models; spoken confirmation
+also requires Piper. They do not call Ollama. Use the app for complete responses.
+STT and LLM diagnostics support `--show-text`. TTS without `--play` synthesizes
+without opening an output device. These commands do not save audio.
 
-Run offline inference against the supplied sample keywords:
+Use each inference/audio diagnostic's `--help` for options. Capture uses `--model-dir`
+for wake word and `--stt-model` for Whisper, while the app uses
+`--wakeword-model-dir` and `--stt-model-dir`. TTS uses `--device` for output;
+capture and the app use `--output-device`.
+
+Offline wake-word sample inference (16 kHz mono 16-bit PCM WAV):
 
 ```bash
 .venv/bin/python -m jarvis.wakeword.diagnostics \
@@ -158,497 +254,50 @@ Run offline inference against the supplied sample keywords:
   --keywords-file models/wakeword/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01/test_wavs/test_keywords.txt
 ```
 
-Sample `0.wav` produced `light up`; sample `1.wav` produced `lovely child`
-and `forever`. These validate model inference, not recognition of Jarvis.
-The WAV diagnostic adds a short silence tail to flush buffered features.
+The diagnostic adds a silence tail to flush features. Sample 0 previously produced
+`light up`; sample 1 produced `lovely child` and `forever`. These check the sample
+keywords, not Jarvis recognition. STT WAV input also requires 16 kHz mono 16-bit PCM.
 
-Integration follows the [official Python example](https://github.com/k2-fsa/sherpa-onnx/blob/master/python-api-examples/keyword-spotter.py)
-and [keyword spotter API](https://github.com/k2-fsa/sherpa-onnx/blob/master/sherpa-onnx/python/sherpa_onnx/keyword_spotter.py).
-Validated with sherpa-onnx 1.13.7 on macOS ARM64 / Python 3.9; other platforms
-have not yet been exercised.
+### Manual validation still needed
 
-To verify the entry point:
+1. Observe silence and unrelated speech for false activations; repeat Jarvis requests.
+2. Say only “Jarvis” and verify no-speech cancellation. Compare immediate short
+   commands with commands spoken after the activation event.
+3. Try brief and long pauses, then a shorter maximum using `--max-duration 4
+   --no-speech-timeout 2` in the app or capture diagnostic.
+4. Remain silent during playback and confirm room echo does not reactivate Jarvis;
+   then issue another request.
+5. Review Ctrl+C and backend/device failure behavior, run longer sessions, and
+   validate operation with internet unavailable while preserving local Ollama access.
+6. Audit network activity and content persistence separately; successful interaction
+   and a passing configuration diagnostic do not complete this audit.
 
-```bash
-python -m jarvis.app
-```
+## Verification
 
-## Tests
-
-Run the complete test suite from the project root:
-
-```bash
-python3 -m unittest discover -s tests -v
-```
-
-Run a specific test file:
-
-```bash
-python3 -m unittest tests/test_audio_models.py -v
-```
-
-## Request capture contracts
-
-`jarvis.capture` defines the contracts for the next stage after activation:
-
-- `CaptureState.WAITING`: listen for the wake word.
-- `CaptureState.CAPTURING`: collect the spoken request after activation.
-- `AudioRequest`: associate an activation event with an immutable sequence of
-  in-memory PCM chunks. Chunks must share a format and remain in capture order.
-  The request exposes audio format, frame count, and sample-based duration.
-
-A request may include pre-roll from before activation. Empty captures do not
-produce a request. Audio chunks are omitted from the request's representation
-so routine object logging does not include PCM content.
-
-`PreRollBuffer` retains the newest audio in memory for up to 0.5 seconds by
-default (configurable). `append(chunk)` evicts the oldest PCM frames when the
-limit is reached; `snapshot()` returns an immutable sequence without consuming
-the buffer, and `clear()` releases retained chunks and resets format tracking.
-The limit measures stored samples, not elapsed time across capture gaps.
-Snapshots retain their audio until their consumers release them.
-
-Chunks must share a PCM format and arrive in capture order. Partial trimming
-preserves complete PCM frames and the original chunk capture timestamp. The
-buffer performs no disk writes and does not open the microphone.
-
-Local VAD is implemented as described below. State transitions,
-microphone-to-buffer integration, and end-of-request handling will be
-implemented in subsequent micro steps. The existing wake-word
-diagnostic still only reports activation events.
-
-
-## Local voice activity detection (VAD)
-
-`SileroVoiceActivityDetector` uses Silero through sherpa-onnx on CPU. It
-identifies speech activity without transcribing words. The runtime reads
-local model files and keeps audio in memory; it does not download models,
-send audio to a service, or save speech segments.
-
-Install the optional dependencies (shared with the wakeword extra):
+Latest automated verification on 2026-09-10: **121 tests passed**. Tests cover
+contracts, conversion, capture transitions, failure handling, playback cleanup,
+injected full-pipeline interactions, and configuration propagation/validation.
+They do not establish hardware compatibility or complete offline operation.
 
 ```bash
-.venv/bin/python -m pip install -e ".[vad]"
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m unittest discover -s tests -p 'test_audio_models.py' -v
 ```
 
-Download the model once during setup:
-
-```bash
-mkdir -p models/vad
-curl -fL https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx -o models/vad/silero_vad.onnx
-```
-
-The default path is `models/vad/silero_vad.onnx`, relative to the working
-directory; the constructor accepts a different `model_path`. The validated
-model SHA-256 is
-`9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6`.
-See the [official Silero model documentation](https://k2-fsa.github.io/sherpa/onnx/vad/silero-vad.html).
-
-The adapter consumes the same 16 kHz mono 16-bit PCM as the microphone. It
-buffers incomplete windows and returns ordered `VoiceActivity` decisions for
-all complete 512-sample windows (32 ms each). Short input may return no
-results. `reset()` discards partial input and speech state; `close()` releases
-resources. The detector supports use as a context manager.
-
-`VadConfig` defaults to a threshold of 0.5, 0.25 seconds of minimum speech,
-and 0.5 seconds of minimum silence. Decisions reflect the backend's debounced
-speech state, so the capture controller must account for this delay when
-implementing end-of-request handling. These settings are separate from the
-0.5-second pre-roll buffer. Incomplete final windows are discarded on reset;
-stream-end handling belongs to the future controller.
-
-Native completed segments are discarded after every window. The native
-segment buffer is limited to 30 seconds and internally splits speech at
-20 seconds; this is not the application's request timeout.
-
-Validation on macOS ARM64 / Python 3.9 with sherpa-onnx 1.13.7: silence
-produced no speech, the downloaded wake-word model's `test_wavs/0.wav`
-produced speech, and a two-second silence tail returned the detector to
-silence. All 51 unit tests passed. Live microphone VAD and full request
-capture are not yet validated or connected to the wake-word diagnostic.
-
-### Request capture controller
-
-`jarvis.capture.CaptureController` connects an injected wake-word detector and
-VAD to the in-memory pre-roll buffer. Feed ordered 16 kHz mono 16-bit PCM chunks
-through `process(chunk)`. It returns an `AudioRequest` on completion, or `None`
-while waiting, capturing, or cancelling an activation without speech. The
-`state` property exposes `WAITING` and `CAPTURING`.
-
-`CaptureConfig` defaults:
-
-- `pre_roll_seconds=0.5`: retained audio up to and including activation.
-- `no_speech_timeout_seconds=3.0`: cancel if no speech is detected after activation.
-- `max_duration_seconds=15.0`: stop collecting post-activation audio at this limit.
-- `silence_hold_seconds=0.5`: require sustained non-speech decisions after speech.
-  This is additional to Silero's 0.5-second silence debounce, so the default
-  endpoint delay is approximately one second, plus window/chunk rounding.
-
-Timeouts measure audio samples, not wall-clock time. Silence and no-speech
-completion are checked at chunk boundaries; use the existing 100 ms input
-chunks. Maximum duration trims on a PCM frame boundary and excludes pre-roll.
-A request includes its pre-roll and trailing silence. Audio beyond completion
-in the final input chunk is discarded. An interrupted audio source must call
-`reset()` to discard the unfinished request; sample-based timeouts cannot
-advance while no audio arrives.
-
-Activation/pre-roll audio is not fed to VAD, preventing the activation alone
-from qualifying as a request. Speech entirely inside that audio cannot qualify
-either; this boundary needs live testing with “Jarvis” followed immediately by
-short commands. The additional silence hold tolerates brief VAD state changes;
-custom hold/debounce settings and requests longer than Silero's internal
-20-second segment limit require validation together.
-
-The controller resets detector state after completion or cancellation. It does
-not open or close the caller-owned detectors or microphone, transcribe speech,
-or persist audio. Automated controller tests pass; a live microphone capture
-diagnostic is available below; the user confirmed live capture works on 2026-09-09.
-
-### Live request capture test
-
-With the wake-word and VAD models installed, run from the repository root:
-
-```bash
-.venv/bin/python -m jarvis.capture.diagnostics --duration 90
-```
-
-Use `--device ID` or `--device "device name"` to select a microphone. List
-devices with `.venv/bin/python -m jarvis.audio.diagnostics --list-devices`.
-The diagnostic prints activation, request completion (stored duration and
-frame count), and cancellation without saving audio. It also loads the local
-Whisper model and transcribes each completed request in memory. STT timing and
-empty status are always reported; add `--show-text` to print each transcript.
-
-1. Say “Jarvis” followed by a sentence, then stop speaking. Expect activation,
-   completion after silence, and a return to waiting.
-2. Say only “Jarvis”. Expect cancellation after three seconds without speech.
-3. Speak a request with a brief pause, then continue. Check that it stays in
-   one request. Repeat with a longer pause to observe the endpoint.
-4. Repeat several requests to check that each activation starts fresh.
-5. Test a shorter maximum with `--max-duration 4 --no-speech-timeout 2`.
-   Keep speaking after activation: capture should finish after four seconds
-   of post-activation audio, with up to 0.5 seconds of pre-roll added.
-6. Test “Jarvis” immediately followed by a short command, and compare with
-   waiting for the activation message before speaking. Report missed commands.
-
-`--silence-hold`, `--pre-roll`, and `--no-speech-timeout` configure the controller
-in seconds. `--threshold` configures wake-word sensitivity; `--model-dir`,
-`--keywords-file`, and `--vad-model` override model paths. `--duration` limits
-the whole session; expiry or Ctrl+C discards any unfinished request.
-
-Automated verification: all 63 tests pass, including diagnostic completion,
-reactivation, cancellation, interruption, source failure, and invalid session
-duration. The user confirmed live request capture works on 2026-09-09; detailed observations for every edge case have not been reported. Console events establish
-capture boundaries; they do not establish transcription accuracy or whether
-every spoken word was retained.
-
-
-### Speech-to-text contracts
-
-`jarvis.stt.Transcriber` defines synchronous local transcription of an
-`AudioRequest`, preserving the capture format and in-memory audio boundary.
-Adapters implement `transcribe(request)` and idempotent `close()`; the interface
-also supports context-manager cleanup.
-
-`TranscriptionResult` contains trimmed `text` and an optional backend-reported
-`language` code. `is_empty` identifies recognition with no usable text. Text is
-excluded from the default representation. Unsupported audio raises `ValueError`;
-backend failures use `TranscriptionError` with content-free messages. Adapters
-must keep audio and text out of logs and files and perform inference locally.
-These are contracts, not an implemented recognizer or enforced network sandbox.
-
-The first adapter is `jarvis.stt.SherpaWhisperTranscriber`. It loads the int8
-Whisper tiny.en files, converts each request chunk from signed 16-bit PCM to
-float samples in memory, and returns English text. It does not write audio or
-transcripts. Missing model files and unavailable dependencies fail before
-inference; backend failures are reported as `TranscriptionError` without
-including content. Exact-zero PCM silence returns an empty result without
-invoking the model, preventing a needless inference path. Empty recognizer
-output is successful and distinguishable from `TranscriptionError`.
-
-On the Apple M4 development machine, model load took 0.152 seconds and one
-6.6-second bundled sample took 0.251 seconds to transcribe with two CPU
-threads. These are single-run smoke measurements, not a latency guarantee.
-
-All 68 tests pass. Voice interaction is English-only for now, as confirmed by
-the user. The initial backend/model is selected below; latency remains to be measured.
-
-Run `python -m jarvis.stt.diagnostics path/to/request.wav` to benchmark a local
-English request without printing its transcript. Add `--show-text` to inspect
-the recognized text during validation. The WAV must be 16 kHz mono 16-bit PCM.
-The diagnostic reports audio length, model load time, inference time, and empty
-status; it keeps normal output free of conversation content.
-
-
-### Initial STT backend selection
-
-Selected on 2026-09-09: **Whisper tiny.en through sherpa-onnx 1.13.7, CPU**.
-The development machine is an Apple M4 Mac mini with 16 GB RAM; the existing
-Python environment already runs sherpa-onnx for wake word and VAD. English-only
-interaction allows an English-only model. Reusing the installed inference stack
-keeps the first adapter small and supports in-memory PCM input.
-
-The model is installed under `models/stt/sherpa-onnx-whisper-tiny.en/`. The
-int8 encoder and decoder loaded successfully, and bundled sample 0 produced a
-transcription locally.
-
-The [official sherpa-onnx tiny.en documentation](https://k2-fsa.github.io/sherpa/onnx/pretrained_models/whisper/tiny.en.html)
-provides an exported ONNX model. The installed Python API was inspected and
-exposes `OfflineRecognizer.from_whisper` with encoder, decoder, tokens, language,
-task, thread count, and provider arguments. Initial settings will be
-`language="en"`, `task="transcribe"`, `provider="cpu"`, `num_threads=2`, and
-`debug=False`, loading explicit files under `models/stt/`. Model download is a
-setup action; normal transcription must use local files without network access.
-
-Alternatives considered:
-
-- [whisper.cpp](https://github.com/ggml-org/whisper.cpp) supports Apple Silicon
-  acceleration through Metal and Core ML. It is a useful candidate if CPU
-  latency is inadequate, but requires another runtime and an in-memory binding.
-- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) provides a Python
-  API and CPU int8 inference, but introduces the CTranslate2 inference stack.
-
-Choosing tiny.en is an initial integration decision, not a benchmark result or
-an accuracy guarantee. Next, measure model load time and warm transcription latency on
-short English requests and the 15-second capture limit; check recognition of
-the user's accent, silence, and empty output. A provisional engineering target
-is warm transcription faster than audio duration, then assess conversational
-latency with the user. If accuracy is inadequate, evaluate a larger English
-Whisper model; if latency is inadequate, compare an Apple-accelerated runtime.
-Keep measurement logs to timings and counts, without transcript content.
-
-
-## Local language-model contracts
-
-`jarvis.llm` defines `TextRequest` and `TextResponse` as nonempty, trimmed
-text values held in memory, with content excluded from their representations.
-Callers must skip empty STT results before constructing a request.
-
-`LanguageModel.respond(request)` returns a response; backend failures, including
-empty answers, must raise a content-free `LanguageModelError`. Implementations
-must use local inference without remote fallback or conversation logging.
-Any history must remain bounded in memory; `reset()` clears it, and `close()`
-clears history and releases resources. Context-manager exit calls `close()`.
-The first adapter is `jarvis.llm.ollama.OllamaLanguageModel`, configured through
-`OllamaConfig`. The pipeline can depend on `LanguageModel` while backend-specific
-configuration stays at construction time.
-
-The user validated live capture and transcription on 2026-09-09 and accepted
-current recognition limitations to prioritize completing the full voice pipeline.
-
-## Speech synthesis and playback contracts
-
-`jarvis.tts` defines backend-independent contracts for the response-to-voice
-boundary. `Synthesizer.synthesize(TextResponse)` returns `SynthesizedAudio`,
-which contains nonempty, frame-aligned PCM bytes and an explicit sample format.
-`AudioPlayer.play(SynthesizedAudio)` owns output playback and exposes
-`is_playing`; `stop()` must release output resources. Both components support
-context-manager cleanup. Backend failures use `SynthesisError` or
-`AudioPlayerError` and must not include response text or audio contents.
-
-`SherpaPiperSynthesizer` and `SoundDeviceAudioPlayer` implement these contracts.
-Audio stays in memory. Playback blocks until the queued audio finishes and
-releases its stream on return, failure, or Ctrl+C. Use these synchronous
-components from one caller at a time.
-
-### Initial TTS selection
-
-Selected on 2026-09-10: Piper/VITS through sherpa-onnx on CPU, using the
-`en_US-lessac-medium` English voice (one speaker, 22,050 Hz). This reuses the
-installed sherpa-onnx 1.13.7 runtime used for wake word, VAD, and STT. Its
-`OfflineTtsVitsModelConfig` and `OfflineTtsConfig` classes are available in the
-development environment. Initial latency measurements are recorded below;
-subjective voice quality remains to be confirmed by the user.
-See the [official voice documentation and samples](https://k2-fsa.github.io/sherpa/onnx/tts/all/English/vits-piper-en_US-lessac-medium.html).
-
-The optional dependencies are declared as `.[tts]`. Setup:
-
-```bash
-.venv/bin/python -m pip install -e ".[tts]"
-mkdir -p models/tts
-curl -fL https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-medium.tar.bz2 -o models/tts/vits-piper-en_US-lessac-medium.tar.bz2
-tar -xjf models/tts/vits-piper-en_US-lessac-medium.tar.bz2 -C models/tts
-```
-
-The default model directory is `models/tts/vits-piper-en_US-lessac-medium/`.
-Keep the complete bundle, including phonemizer data and tokens. Normal synthesis
-loads explicit local files without downloading anything. Adapter
-settings use CPU, two threads, speaker ID 0, and speed 1.0. The adapter
-converts generated samples into signed 16-bit little-endian PCM in memory,
-preserving the voice's 22,050 Hz sample rate instead of forcing the microphone's
-16 kHz rate. Playback uses the existing sounddevice dependency.
-
-The voice bundle was downloaded and extracted on 2026-09-10. The archive SHA-256
-is `9e3febfacf0abf4270172d2958bcec246032b7e88efc2720840cc80c93de334e`
-(recorded locally, not compared against a publisher checksum). The ONNX model,
-tokens, model card, and phonemizer data are present under the planned directory.
-Model assets are ignored by Git.
-
-### TTS diagnostic
-
-Generate a fixed English sentence in memory and play it:
-
-```bash
-.venv/bin/python -m jarvis.tts.diagnostics --play
-```
-
-Omit `--play` to measure synthesis without opening an output device. Use
-`--device ID` or `--device "output device name"` to select output, and
-`--model-dir` to override the voice bundle location. The diagnostic reports
-timings and audio format; it does not save audio or print response text.
-
-On 2026-09-10, native synthesis generated 2.958 seconds of audio in 0.104 seconds
-after a 0.265-second model load. The output stream completed playback on the
-Mac's default device. This is one smoke measurement; the user still needs to
-confirm audibility and voice quality. All 105 tests passed, covering PCM clipping,
-invalid model output, output failures, retry, and cleanup on interruption.
-Wake-word suspension and full pipeline integration are described below.
-
-### Playback suspension diagnostic
-
-Test repeated captures with a fixed spoken confirmation containing "Jarvis":
-
-```bash
-.venv/bin/python -m jarvis.capture.diagnostics --duration 90 --speak-confirmation
-```
-
-Say "Jarvis" followed by an English request, then remain silent during the
-confirmation. The microphone is stopped and its queue discarded before
-synthesis/playback; the capture controller resets before and after output.
-Listening resumes with the original input configuration after output finishes.
-The confirmation should not cause another activation. Then say a new request
-to verify reactivation. `--output-device ID` selects playback independently of
-the input `--device`; `--show-text` remains opt-in for STT output.
-
-This mode speaks a fixed sentence, not an LLM answer. The synchronous
-`jarvis.capture.playback.speak_response` helper accepts any `TextResponse` and
-injected synthesizer/player. Expected synthesis/playback errors restore listening;
-Ctrl+C and output cleanup failures leave input stopped for shutdown. Automatic
-tests cover ordering, queue clearing, repeated cycles, failure recovery, and
-interruption. The user confirmed hearing the spoken confirmation on 2026-09-10.
-Detailed live self-activation and room echo observations remain unreported; no echo
-cancellation or post-playback delay is implemented. The integrated app is
-described below.
-
-Shutdown verification: all 113 tests pass. If output closure fails, the player
-retains its stream for a later cleanup retry and rejects new playback. Response
-cleanup attempts detector reset even when output release fails; an existing
-failure or Ctrl+C is preserved. Input remains stopped when cleanup fails. A
-partially failed microphone restart triggers input cleanup. These failure paths
-were tested with injected errors, not by disconnecting real audio hardware.
-
-## Run the voice assistant
-
-With all local models installed and Ollama running `llama3.2:3b`, start from
-the repository root:
-
-```bash
-.venv/bin/python -m jarvis.app
-```
-
-Say "Jarvis, why is the sky blue?" after `state=waiting`. The app captures the
-request, transcribes it, calls the local LLM, synthesizes its actual answer,
-plays it, and returns to waiting. Input is stopped throughout transcription,
-LLM inference, synthesis, and playback; speech during these stages is ignored.
-Ctrl+C stops the session and clears in-memory conversation history.
-
-Use `--device ID` and `--output-device ID` for audio selection. `--model` and
-`--endpoint` configure Ollama; endpoint validation permits only literal loopback
-addresses. The separate Ollama service must still be configured for local-only
-operation as described below; the app does not establish the server's network
-behavior from the client's environment. Application settings are centralized in `jarvis.config.AppConfig`; CLI
-overrides are validated before backend startup. `--duration 90` limits a session, checked between
-requests; an in-flight response may finish after the deadline.
-
-Configure capture limits and bounded conversation history, for example:
-
-```bash
-.venv/bin/python -m jarvis.app --device 2 --max-duration 10 --no-speech-timeout 2 --max-history-turns 2
-```
-
-Run `python -m jarvis.app --help` for all options. Model locations use
-`--wakeword-model-dir`, `--keywords-file`, `--vad-model`, `--stt-model-dir`,
-and `--tts-model-dir`. Relative paths resolve from the working directory;
-model bundles must retain the filenames expected by their adapters.
-`--threshold` controls wake-word sensitivity. Capture uses `--pre-roll`,
-`--no-speech-timeout`, `--max-duration`, and `--silence-hold` (seconds).
-VAD exposes `--vad-threshold`, `--vad-min-speech-duration`, and
-`--vad-min-silence-duration`. Ollama limits use `--timeout-seconds`,
-`--context-tokens`, `--max-response-tokens`, `--keep-alive-seconds`, and
-`--max-history-turns`. Existing defaults are preserved; zero history turns
-means independent requests. Input remains 16 kHz mono 16-bit PCM.
-
-The app does not read environment overrides for these settings or write a
-configuration file. Programmatic configuration groups the existing audio,
-wake-word, VAD, capture, and Ollama contracts. Paths are checked by the local
-adapters when loading models; CLI validation does not establish model compatibility.
-
-Console output contains states, request timing, and the stage that failed,
-without transcripts or answers. Empty STT skips the LLM and output. Recoverable
-STT/LLM/TTS/output errors restore listening; history is reset after a failed
-response so later turns cannot assume the user heard it. Device and cleanup
-failures terminate the session. The injected `run_assistant` runner depends on
-backend contracts; concrete backend selection is confined to `main()`.
-
-Verification on 2026-09-10: 118 tests passed, including repeated end-to-end
-interactions with test doubles, empty recognition, failure recovery, and shutdown.
-The real application loaded the local backends, opened the microphone, reached
-waiting, and exited successfully after a two-second session. The user confirmed
-the integrated voice pipeline works on 2026-09-10. Extended stability and
-offline/privacy checks remain pending.
-
-
-### Local Ollama adapter
-
-The initial model is `llama3.2:3b`, served at `http://127.0.0.1:11434`.
-Install it separately with `ollama pull llama3.2:3b`; Jarvis never downloads
-models during inference. Defaults are a 2,048-token context, a 100-token answer
-limit, a 30-second socket timeout, and a 600-second model keep-alive. The answer
-limit may truncate text. The socket timeout bounds individual blocking socket
-operations, not an absolute end-to-end deadline.
-
-Run a fixed, nonsensitive English question through the adapter:
-
-```bash
-.venv/bin/python -m jarvis.llm.diagnostics --show-text
-```
-
-Without `--show-text`, output contains only timing and character count.
-`--model` and `--endpoint` override the diagnostic defaults. Programmatic callers
-can configure all limits with `OllamaConfig` and call `respond(TextRequest(...))`.
-This adapter retains up to four user/assistant turns by default. Set
-`max_history_turns=0` for independent interactions or choose another bound in
-`OllamaConfig`; `reset()` clears the history. Microphone integration remains a
-later step.
-
-The HTTP client connects directly to literal loopback IPs, ignores environment
-proxies, and rejects redirects. Cloud-named models are rejected. HTTP failures,
-connection failures, timeouts, and malformed/empty answers become content-free
-`LanguageModelError` values; later requests can retry. Audio, prompts, and answers
-are not logged or written by the adapter. Closing it does not unload the shared
-Ollama model; the server manages that model according to keep-alive.
-
-A local endpoint and model-name checks cannot enforce the separate server's
-behavior (including aliased models). Disable cloud features on the Ollama server
-with `OLLAMA_NO_CLOUD=1` and restart it. For the macOS application, set it with
-`launchctl setenv OLLAMA_NO_CLOUD 1` before restarting Ollama. Server configuration
-and a full offline/privacy audit remain unverified in this step. See the
-[official server configuration FAQ](https://docs.ollama.com/faq) and
-[chat API](https://docs.ollama.com/api/chat).
-
-Validation: all 89 tests passed. A real adapter call to the installed local
-`llama3.2:3b` returned 188 characters in 0.863 seconds (one smoke measurement,
-not a latency guarantee).
-
-Run the client-side privacy audit with:
-
-```bash
-OLLAMA_NO_CLOUD=1 .venv/bin/python -m jarvis.llm.privacy_diagnostics
-```
-
-The audit checks only local client configuration and does not contact Ollama.
-For the macOS Ollama application, configure `OLLAMA_NO_CLOUD=1` with
-`launchctl setenv` and restart the application, then run the audit in a shell
-that has the same setting. A passing audit does not prove behavior of a
-separately managed server; it confirms the Jarvis client is loopback-only and
-the server process was requested to disable cloud features.
+Previously recorded live validation: microphone capture; Jarvis activation with
+satisfactory sensitivity; capture and English transcription (2026-09-09);
+audible spoken confirmation and integrated voice responses (2026-09-10).
+Real app startup reached waiting and exited after a two-second session.
+Detailed voice-quality, echo, false-activation, and long-session results remain
+unreported. Documentation/configuration checks did not repeat hardware validation.
+
+Recorded single-run measurements on the development machine, not latency guarantees:
+
+| Stage | Observation |
+| --- | --- |
+| Whisper | 0.152 s load; 0.251 s inference for approximately 6.6 s of sample audio |
+| Ollama | 0.863 s for a response of 188 characters |
+| Piper | 0.265 s load; 0.104 s synthesis for 2.958 s of audio |
+
+Actions/tools, integrations, persistent memory, playback interruption, and a
+visual interface are outside the current MVP scope and require separate work.
