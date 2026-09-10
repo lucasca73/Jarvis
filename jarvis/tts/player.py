@@ -56,10 +56,13 @@ class SoundDeviceAudioPlayer(AudioPlayer):
                     raise
 
     def stop(self) -> None:
-        stream, self._stream = self._stream, None
-        self._playing = False
+        stream = self._stream
         if stream is not None:
             try:
                 stream.close()  # PortAudio discards pending audio on close.
             except Exception:
+                # Retain ownership so a later cleanup can retry. The output
+                # must not be treated as released until close succeeds.
                 raise AudioPlayerError('Unable to release audio output') from None
+        self._stream = None
+        self._playing = False

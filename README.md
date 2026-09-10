@@ -530,6 +530,13 @@ Detailed live self-activation and room echo observations remain unreported; no e
 cancellation or post-playback delay is implemented. Full pipeline wiring remains
 in module 7.
 
+Shutdown verification: all 113 tests pass. If output closure fails, the player
+retains its stream for a later cleanup retry and rejects new playback. Response
+cleanup attempts detector reset even when output release fails; an existing
+failure or Ctrl+C is preserved. Input remains stopped when cleanup fails. A
+partially failed microphone restart triggers input cleanup. These failure paths
+were tested with injected errors, not by disconnecting real audio hardware.
+
 
 ### Local Ollama adapter
 

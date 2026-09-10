@@ -83,3 +83,36 @@ class CapturePlaybackTests(unittest.TestCase):
             self.speak()
         self.source.start.assert_not_called()
         self.assertFalse(self.running)
+        self.assertEqual(self.controller.reset.call_count, 2)
+
+    def test_interrupt_survives_cleanup_failures(self):
+        self.player.play.side_effect = KeyboardInterrupt
+        self.player.stop.side_effect = AudioPlayerError('Cannot close output')
+        with self.assertRaises(KeyboardInterrupt):
+            self.speak()
+        self.source.start.assert_not_called()
+        self.assertEqual(self.controller.reset.call_count, 2)
+
+    def test_original_output_error_survives_reset_failure(self):
+        failure = AudioPlayerError('Playback failed')
+        self.player.play.side_effect = failure
+        self.controller.reset.side_effect = [None, RuntimeError('Reset failed')]
+        with self.assertRaises(AudioPlayerError) as raised:
+            self.speak()
+        self.assertIs(raised.exception, failure)
+        self.source.start.assert_not_called()
+        self.player.stop.assert_called_once()
+
+    def test_restart_failure_stops_partially_started_input(self):
+        failure = RuntimeError('Input restart failed')
+
+        def partial_start(config):
+            self.running = True
+            raise failure
+
+        self.source.start.side_effect = partial_start
+        with self.assertRaises(RuntimeError) as raised:
+            self.speak()
+        self.assertIs(raised.exception, failure)
+        self.assertEqual(self.source.stop.call_count, 2)
+        self.assertFalse(self.running)

@@ -107,7 +107,22 @@ class PlayerTests(unittest.TestCase):
         with self.assertRaises(KeyboardInterrupt):
             self.player.play(self.audio)
         self.stream.close.assert_called_once()
+        self.assertIs(self.player._stream, self.stream)
+        self.stream.close.side_effect = None
+        self.player.stop()
         self.assertFalse(self.player.is_playing)
+
+    def test_close_failure_retains_stream_for_retry(self):
+        self.stream.close.side_effect = RuntimeError('Cannot close')
+        with self.assertRaises(AudioPlayerError):
+            self.player.play(self.audio)
+        self.assertIs(self.player._stream, self.stream)
+        with self.assertRaises(AudioPlayerError):
+            self.player.play(self.audio)
+        self.stream.close.side_effect = None
+        self.player.stop()
+        self.assertIsNone(self.player._stream)
+        self.player.play(self.audio)
 
     def test_underflow_and_unsupported_format(self):
         self.stream.write.return_value = True
