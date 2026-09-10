@@ -32,6 +32,10 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -e ".[wakeword,vad,tts]"
 ```
 
+For desktop development, install the optional GUI and packaging tools with
+`.venv/bin/python -m pip install -e ".[gui,bundle]"`. They are excluded from
+the default runtime while the CLI remains the supported entry point.
+
 `sounddevice>=0.5,<1` is the base dependency. The three extras currently share
 `sherpa-onnx==1.13.7` and `numpy>=1.23,<3`; they cover the complete local audio
 inference pipeline, including STT. There is no separate `stt` extra.
@@ -181,12 +185,14 @@ jarvis/
 ├── capture/     # pre-roll, request controller, microphone suspension
 ├── stt/         # Whisper transcription
 ├── llm/         # Ollama client, bounded history, configuration audit
-└── tts/         # Piper synthesis and sounddevice playback
+├── tts/         # Piper synthesis and sounddevice playback
+└── ui/          # optional Qt status window and content-free state model
 ```
 
 `run_assistant` accepts injected backend dependencies; `main()` constructs the
-concrete components and manages their lifetimes. Contracts remain separate
-from backend implementations.
+concrete components and manages their lifetimes. It can also publish
+content-free state callbacks and receive a cooperative stop request, which the
+desktop service will use. Contracts remain separate from backend implementations.
 
 - **Audio:** `AudioConfig`, `AudioDevice`, `AudioChunk`, and `AudioInput` describe
   input. `SoundDeviceDeviceCatalog` discovers microphones. `SoundDeviceAudioInput`
@@ -304,4 +310,4 @@ Recorded single-run measurements on the development machine, not latency guarant
 
 Actions/tools, integrations, persistent memory, and playback interruption require
 separate work. The minimal status interface and desktop executable are planned
-in [UI_PLAN.md](UI_PLAN.md).
+in [UI_PLAN.md](UI_PLAN.md); the GUI is not yet enabled by the default CLI.

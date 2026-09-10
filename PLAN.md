@@ -127,7 +127,7 @@ Actions and tools, integrations, persistent memory, and interruption during play
 
 ## Resume here
 
-**Next micro step: UI.1 — refine the minimal interface proposal and build-runtime choice.** See [UI_PLAN.md](UI_PLAN.md). The proposed initial target is macOS Apple Silicon, pending platform preference. Configuration consolidation is complete; the last automated verification had 121 passing tests. Validation work in 2.3a, 2.10a, and 7.4–7.7 is deferred by user request and remains incomplete. Recognition improvements remain future work.
+**Next micro step: UI.2 — expose typed state/error events and cooperative shutdown through a shared application service.** UI.1 produced the GUI-independent status model and an optional Qt window skeleton. PySide6 6.10.3 and PyInstaller 6.22.2 are installed in `.venv` on macOS ARM64 / Python 3.9; the window has not yet been launched. Configuration consolidation is complete; the latest automated verification has 126 passing tests. Validation work in 2.3a, 2.10a, and 7.4–7.7 is deferred by user request and remains incomplete. Recognition improvements remain future work.
 
 
 ## Historical smoke observations

@@ -103,10 +103,15 @@ step if sharing the application becomes a requirement.
 
 ## Implementation order
 
-- [ ] UI.1 Confirm the visual proposal and build-runtime compatibility; create
-  a small simulated-state prototype to assess the indicator and labels.
+- [x] UI.1 Confirm the visual proposal and build-runtime compatibility; create
+  a small simulated-state prototype to assess the indicator and labels. Added
+  the toolkit-independent `jarvis.ui.status` model and an optional Qt window
+  skeleton. PySide6 6.10.3 and PyInstaller 6.22.2 are installed in the current
+  `.venv` on macOS ARM64 / Python 3.9. The Qt window has not been launched.
 - [ ] UI.2 Expose typed state/error events and cooperative shutdown through a
-  shared application service; retain CLI behavior.
+  shared application service; retain CLI behavior. The current runner now
+  accepts `on_state` and `stop_requested` callbacks, checked between stages;
+  extracting the reusable worker/service and typed error events remains.
 - [ ] UI.3 Connect the window and menu-bar indicator to the worker, including
   initialization, failures, quit behavior, and a single running instance.
 - [ ] APP.1 Resolve packaged resources independently of the working directory

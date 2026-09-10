@@ -30,7 +30,8 @@ RECOVERABLE_ERRORS = (TranscriptionError, LanguageModelError, SynthesisError, Au
 
 
 def run_assistant(source, controller, transcriber, model, synthesizer, player,
-                  audio_config, *, duration=None, report=print):
+                  audio_config, *, duration=None, report=print,
+                  on_state=None, stop_requested=None):
     """Run on a single consumer thread; caller owns backend lifetimes.
 
     Reports contain only states/timing. Duration is checked between requests;
@@ -45,11 +46,15 @@ def run_assistant(source, controller, transcriber, model, synthesizer, player,
         nonlocal state
         state = next_state
         report(f'state={state.value}')
+        if on_state is not None:
+            on_state(next_state)
+
+    should_stop = stop_requested if stop_requested is not None else (lambda: False)
 
     try:
         source.start(audio_config)
         transition(AssistantState.WAITING)
-        while deadline is None or monotonic() < deadline:
+        while not should_stop() and (deadline is None or monotonic() < deadline):
             try:
                 chunk = source.read_chunk(timeout=0.5)
             except TimeoutError:
@@ -62,6 +67,8 @@ def run_assistant(source, controller, transcriber, model, synthesizer, player,
                 if capture_state != state:
                     transition(capture_state)
                 continue
+            if should_stop():
+                break
             started = monotonic()
             transcript = response = audio = None
             try:
@@ -69,13 +76,15 @@ def run_assistant(source, controller, transcriber, model, synthesizer, player,
                                        recoverable_errors=RECOVERABLE_ERRORS):
                     transition(AssistantState.TRANSCRIBING)
                     transcript = transcriber.transcribe(request)
-                    if not transcript.is_empty:
+                    if not transcript.is_empty and not should_stop():
                         transition(AssistantState.RESPONDING)
                         response = model.respond(TextRequest(transcript.text))
-                        transition(AssistantState.SYNTHESIZING)
-                        audio = synthesizer.synthesize(response)
-                        transition(AssistantState.SPEAKING)
-                        player.play(audio)
+                        if not should_stop():
+                            transition(AssistantState.SYNTHESIZING)
+                            audio = synthesizer.synthesize(response)
+                        if not should_stop():
+                            transition(AssistantState.SPEAKING)
+                            player.play(audio)
             except RECOVERABLE_ERRORS:
                 if not source.is_running:
                     raise

@@ -17,6 +17,8 @@ include = ["jarvis*"]
 wakeword = ["sherpa-onnx==1.13.7", "numpy>=1.23,<3"]
 vad = ["sherpa-onnx==1.13.7", "numpy>=1.23,<3"]
 tts = ["sherpa-onnx==1.13.7", "numpy>=1.23,<3"]
+gui = ["PySide6>=6.6,<7"]
+bundle = ["pyinstaller>=6,<7"]
 
 [tool.setuptools.package-data]
 "jarvis.wakeword" = ["keywords.txt"]

@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock
 
-from jarvis.app import run_assistant
+from jarvis.app import AssistantState, run_assistant
 from jarvis.audio import AudioConfig
 from jarvis.capture import CaptureState
 from jarvis.llm import LanguageModelError, TextResponse
@@ -87,3 +87,19 @@ class AppTests(unittest.TestCase):
         self.assertFalse(self.source.is_running)
         self.assertEqual(self.source.start.call_count, 1)
         self.assertNotIn('stage_failed=speaking', self.events)
+
+    def test_state_callback_and_cooperative_stop(self):
+        states = []
+        stop = {'value': False}
+
+        def read_chunk(*, timeout):
+            stop['value'] = True
+            return object()
+
+        self.source.read_chunk.side_effect = read_chunk
+        self.controller.process.return_value = None
+        run_assistant(self.source, self.controller, self.transcriber, self.model,
+                      self.synth, self.player, AudioConfig(),
+                      on_state=states.append, stop_requested=lambda: stop['value'])
+        self.assertEqual(states, [AssistantState.WAITING])
+        self.transcriber.transcribe.assert_not_called()
