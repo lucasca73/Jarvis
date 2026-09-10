@@ -7,8 +7,11 @@ from jarvis.tts.contracts import (
     Synthesizer,
     SynthesisError,
 )
+from jarvis.tts.piper import SherpaPiperSynthesizer
+from jarvis.tts.player import SoundDeviceAudioPlayer
 
 __all__ = [
     'AudioPlayer', 'AudioPlayerError', 'SynthesizedAudio', 'Synthesizer',
     'SynthesisError',
+    'SherpaPiperSynthesizer', 'SoundDeviceAudioPlayer',
 ]

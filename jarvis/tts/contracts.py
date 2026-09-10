@@ -10,7 +10,7 @@ from jarvis.llm import TextResponse
 
 @dataclass(frozen=True)
 class SynthesizedAudio:
-    """PCM audio produced in memory for a response."""
+    """Signed little-endian integer PCM kept in memory for a response."""
 
     data: bytes = field(repr=False)
     sample_rate: int = 16_000
@@ -20,8 +20,11 @@ class SynthesizedAudio:
     def __post_init__(self) -> None:
         if not isinstance(self.data, bytes) or not self.data:
             raise ValueError('data must be nonempty PCM bytes')
-        if self.sample_rate <= 0 or self.channels <= 0 or self.sample_width_bytes <= 0:
-            raise ValueError('audio format values must be positive')
+        for value in (self.sample_rate, self.channels, self.sample_width_bytes):
+            if type(value) is not int or value <= 0:
+                raise ValueError('audio format values must be positive integers')
+        if self.sample_width_bytes not in (2, 3, 4):
+            raise ValueError('signed PCM requires a supported sample width')
         if len(self.data) % (self.channels * self.sample_width_bytes):
             raise ValueError('data must align with complete PCM frames')
 
@@ -70,7 +73,11 @@ class AudioPlayer(ABC):
 
     @abstractmethod
     def play(self, audio: SynthesizedAudio) -> None:
-        """Play audio in memory or raise AudioPlayerError."""
+        """Block until playback finishes; raise AudioPlayerError on failure.
+
+        Release the output stream before returning, including on interruption.
+        Detection suspension is the caller's responsibility during playback.
+        """
 
     @abstractmethod
     def stop(self) -> None:

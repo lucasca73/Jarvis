@@ -446,8 +446,10 @@ which contains nonempty, frame-aligned PCM bytes and an explicit sample format.
 context-manager cleanup. Backend failures use `SynthesisError` or
 `AudioPlayerError` and must not include response text or audio contents.
 
-Audio remains in memory and is not written by these contracts. A local TTS
-backend and output-device implementation will be selected in the next step.
+`SherpaPiperSynthesizer` and `SoundDeviceAudioPlayer` implement these contracts.
+Audio stays in memory. Playback blocks until the queued audio finishes and
+releases its stream on return, failure, or Ctrl+C. Use these synchronous
+components from one caller at a time.
 
 ### Initial TTS selection
 
@@ -455,10 +457,11 @@ Selected on 2026-09-10: Piper/VITS through sherpa-onnx on CPU, using the
 `en_US-lessac-medium` English voice (one speaker, 22,050 Hz). This reuses the
 installed sherpa-onnx 1.13.7 runtime used for wake word, VAD, and STT. Its
 `OfflineTtsVitsModelConfig` and `OfflineTtsConfig` classes are available in the
-development environment. Voice quality and latency have not yet been measured.
+development environment. Initial latency measurements are recorded below;
+subjective voice quality remains to be confirmed by the user.
 See the [official voice documentation and samples](https://k2-fsa.github.io/sherpa/onnx/tts/all/English/vits-piper-en_US-lessac-medium.html).
 
-The optional dependencies are declared as `.[tts]`. Setup for the next step:
+The optional dependencies are declared as `.[tts]`. Setup:
 
 ```bash
 .venv/bin/python -m pip install -e ".[tts]"
@@ -467,13 +470,13 @@ curl -fL https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits
 tar -xjf models/tts/vits-piper-en_US-lessac-medium.tar.bz2 -C models/tts
 ```
 
-The planned model directory is `models/tts/vits-piper-en_US-lessac-medium/`.
+The default model directory is `models/tts/vits-piper-en_US-lessac-medium/`.
 Keep the complete bundle, including phonemizer data and tokens. Normal synthesis
-will load explicit local files without downloading anything. Initial adapter
-settings will use CPU, two threads, speaker ID 0, and speed 1.0. The adapter
-will convert generated samples into signed 16-bit little-endian PCM in memory,
+loads explicit local files without downloading anything. Adapter
+settings use CPU, two threads, speaker ID 0, and speed 1.0. The adapter
+converts generated samples into signed 16-bit little-endian PCM in memory,
 preserving the voice's 22,050 Hz sample rate instead of forcing the microphone's
-16 kHz rate. Playback will use the existing sounddevice dependency.
+16 kHz rate. Playback uses the existing sounddevice dependency.
 
 The voice bundle was downloaded and extracted on 2026-09-10. The archive SHA-256
 is `9e3febfacf0abf4270172d2958bcec246032b7e88efc2720840cc80c93de334e`
@@ -481,10 +484,25 @@ is `9e3febfacf0abf4270172d2958bcec246032b7e88efc2720840cc80c93de334e`
 tokens, model card, and phonemizer data are present under the planned directory.
 Model assets are ignored by Git.
 
-Native inference, output-device validation, and an audible test
-remain in step 6.3. The first test should measure synthesis time against generated
-audio duration and confirm the user can hear a short English response. Backend
-and voice selection remain replaceable behind the existing contracts.
+### TTS diagnostic
+
+Generate a fixed English sentence in memory and play it:
+
+```bash
+.venv/bin/python -m jarvis.tts.diagnostics --play
+```
+
+Omit `--play` to measure synthesis without opening an output device. Use
+`--device ID` or `--device "output device name"` to select output, and
+`--model-dir` to override the voice bundle location. The diagnostic reports
+timings and audio format; it does not save audio or print response text.
+
+On 2026-09-10, native synthesis generated 2.958 seconds of audio in 0.104 seconds
+after a 0.265-second model load. The output stream completed playback on the
+Mac's default device. This is one smoke measurement; the user still needs to
+confirm audibility and voice quality. All 105 tests passed, covering PCM clipping,
+invalid model output, output failures, retry, and cleanup on interruption.
+Wake-word suspension and full pipeline integration remain later steps.
 
 
 ### Local Ollama adapter
