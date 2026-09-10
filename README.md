@@ -429,7 +429,50 @@ empty answers, must raise a content-free `LanguageModelError`. Implementations
 must use local inference without remote fallback or conversation logging.
 Any history must remain bounded in memory; `reset()` clears it, and `close()`
 clears history and releases resources. Context-manager exit calls `close()`.
-The Ollama adapter and model selection are still pending.
+The first adapter is `jarvis.llm.ollama.OllamaLanguageModel`, configured through
+`OllamaConfig`. The pipeline can depend on `LanguageModel` while backend-specific
+configuration stays at construction time.
 
 The user validated live capture and transcription on 2026-09-09 and accepted
 current recognition limitations to prioritize completing the full voice pipeline.
+
+
+### Local Ollama adapter
+
+The initial model is `llama3.2:3b`, served at `http://127.0.0.1:11434`.
+Install it separately with `ollama pull llama3.2:3b`; Jarvis never downloads
+models during inference. Defaults are a 2,048-token context, a 100-token answer
+limit, a 30-second socket timeout, and a 600-second model keep-alive. The answer
+limit may truncate text. The socket timeout bounds individual blocking socket
+operations, not an absolute end-to-end deadline.
+
+Run a fixed, nonsensitive English question through the adapter:
+
+```bash
+.venv/bin/python -m jarvis.llm.diagnostics --show-text
+```
+
+Without `--show-text`, output contains only timing and character count.
+`--model` and `--endpoint` override the diagnostic defaults. Programmatic callers
+can configure all limits with `OllamaConfig` and call `respond(TextRequest(...))`.
+This adapter handles one independent interaction at a time; bounded history and
+microphone integration remain later steps.
+
+The HTTP client connects directly to literal loopback IPs, ignores environment
+proxies, and rejects redirects. Cloud-named models are rejected. HTTP failures,
+connection failures, timeouts, and malformed/empty answers become content-free
+`LanguageModelError` values; later requests can retry. Audio, prompts, and answers
+are not logged or written by the adapter. Closing it does not unload the shared
+Ollama model; the server manages that model according to keep-alive.
+
+A local endpoint and model-name checks cannot enforce the separate server's
+behavior (including aliased models). Disable cloud features on the Ollama server
+with `OLLAMA_NO_CLOUD=1` and restart it. For the macOS application, set it with
+`launchctl setenv OLLAMA_NO_CLOUD 1` before restarting Ollama. Server configuration
+and a full offline/privacy audit remain unverified in this step. See the
+[official server configuration FAQ](https://docs.ollama.com/faq) and
+[chat API](https://docs.ollama.com/api/chat).
+
+Validation: all 89 tests passed. A real adapter call to the installed local
+`llama3.2:3b` returned 188 characters in 0.863 seconds (one smoke measurement,
+not a latency guarantee).
