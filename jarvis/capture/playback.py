@@ -1,12 +1,15 @@
 """Suspend microphone capture around a spoken response on the consumer thread."""
 
 import sys
+from contextlib import contextmanager
 
 from jarvis.tts import AudioPlayerError, SynthesisError
 
 
-def speak_response(source, controller, audio_config, synthesizer, player, response):
-    """Discard captured audio, speak, then restart with fresh detector state.
+@contextmanager
+def suspended_capture(source, controller, audio_config, player, *,
+                      recoverable_errors=(SynthesisError, AudioPlayerError)):
+    """Discard captured audio during processing, then restore fresh listening.
 
     Input must be running. The caller owns all components and must use the same
     audio configuration when restarting. Expected synthesis/output failures
@@ -20,9 +23,8 @@ def speak_response(source, controller, audio_config, synthesizer, player, respon
     try:
         controller.reset()
         try:
-            audio = synthesizer.synthesize(response)
-            player.play(audio)
-        except (SynthesisError, AudioPlayerError):
+            yield
+        except recoverable_errors:
             resume = True
             raise
         resume = True
@@ -50,3 +52,10 @@ def speak_response(source, controller, audio_config, synthesizer, player, respon
                 except Exception:
                     pass
                 raise
+
+
+def speak_response(source, controller, audio_config, synthesizer, player, response):
+    """Speak one response while microphone capture is suspended."""
+    with suspended_capture(source, controller, audio_config, player):
+        audio = synthesizer.synthesize(response)
+        player.play(audio)

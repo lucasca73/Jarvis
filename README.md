@@ -502,7 +502,7 @@ after a 0.265-second model load. The output stream completed playback on the
 Mac's default device. This is one smoke measurement; the user still needs to
 confirm audibility and voice quality. All 105 tests passed, covering PCM clipping,
 invalid model output, output failures, retry, and cleanup on interruption.
-Wake-word suspension and full pipeline integration remain later steps.
+Wake-word suspension and full pipeline integration are described below.
 
 ### Playback suspension diagnostic
 
@@ -527,8 +527,8 @@ Ctrl+C and output cleanup failures leave input stopped for shutdown. Automatic
 tests cover ordering, queue clearing, repeated cycles, failure recovery, and
 interruption. The user confirmed hearing the spoken confirmation on 2026-09-10.
 Detailed live self-activation and room echo observations remain unreported; no echo
-cancellation or post-playback delay is implemented. Full pipeline wiring remains
-in module 7.
+cancellation or post-playback delay is implemented. The integrated app is
+described below.
 
 Shutdown verification: all 113 tests pass. If output closure fails, the player
 retains its stream for a later cleanup retry and rejects new playback. Response
@@ -536,6 +536,43 @@ cleanup attempts detector reset even when output release fails; an existing
 failure or Ctrl+C is preserved. Input remains stopped when cleanup fails. A
 partially failed microphone restart triggers input cleanup. These failure paths
 were tested with injected errors, not by disconnecting real audio hardware.
+
+## Run the voice assistant
+
+With all local models installed and Ollama running `llama3.2:3b`, start from
+the repository root:
+
+```bash
+.venv/bin/python -m jarvis.app
+```
+
+Say "Jarvis, why is the sky blue?" after `state=waiting`. The app captures the
+request, transcribes it, calls the local LLM, synthesizes its actual answer,
+plays it, and returns to waiting. Input is stopped throughout transcription,
+LLM inference, synthesis, and playback; speech during these stages is ignored.
+Ctrl+C stops the session and clears in-memory conversation history.
+
+Use `--device ID` and `--output-device ID` for audio selection. `--model` and
+`--endpoint` configure Ollama; endpoint validation permits only literal loopback
+addresses. The separate Ollama service must still be configured for local-only
+operation as described below; the app does not establish the server's network
+behavior from the client's environment. Other backend settings currently use
+their existing defaults. `--duration 90` limits a session, checked between
+requests; an in-flight response may finish after the deadline.
+
+Console output contains states, request timing, and the stage that failed,
+without transcripts or answers. Empty STT skips the LLM and output. Recoverable
+STT/LLM/TTS/output errors restore listening; history is reset after a failed
+response so later turns cannot assume the user heard it. Device and cleanup
+failures terminate the session. The injected `run_assistant` runner depends on
+backend contracts; concrete backend selection is confined to `main()`.
+
+Verification on 2026-09-10: 118 tests passed, including repeated end-to-end
+interactions with test doubles, empty recognition, failure recovery, and shutdown.
+The real application loaded the local backends, opened the microphone, reached
+waiting, and exited successfully after a two-second session. The user confirmed
+the integrated voice pipeline works on 2026-09-10. Extended stability and
+offline/privacy checks remain pending.
 
 
 ### Local Ollama adapter

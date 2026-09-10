@@ -22,7 +22,7 @@ Build a privacy-first voice assistant: microphone → wake word → request capt
 - The English model is present at `models/wakeword/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01/`, including encoder, decoder, joiner, tokens, BPE, and samples. Inference has not yet been validated in this reconstruction.
 - The supplied `keywords_raw.txt` contains example phrases but does not include Jarvis.
 - The sherpa-onnx adapter and microphone/WAV diagnostics are implemented. Offline sample inference passed on macOS ARM64 / Python 3.9 with sherpa-onnx 1.13.7. The user confirmed correct live Jarvis detection and satisfactory sensitivity. Accent-related recognition limitations are accepted for the current stage.
-- `jarvis.app` is currently an entry-point placeholder.
+- `jarvis.app` now connects capture, STT, local Ollama, TTS, and playback with injected dependencies. Startup with the real microphone passed; the user confirmed the integrated voice pipeline works on 2026-09-10.
 - During plan reconstruction, all 29 tests passed with `python3 -m unittest discover -s tests -q`. Neither microphone capture nor sherpa-onnx inference was repeated.
 
 ## Working method
@@ -99,8 +99,8 @@ Completion criterion: the user hears the response and the assistant automaticall
 
 ## Module 7 — MVP integration
 
-- [ ] 7.1 Connect modules in `jarvis.app` with explicit dependencies.
-- [ ] 7.2 Consolidate states: waiting → capturing → transcribing → responding → speaking → waiting.
+- [x] 7.1 Connected modules in `jarvis.app` with explicit dependencies. The runner stops input for the complete response cycle, skips empty recognition, recovers expected backend errors, and clears content/history on shutdown. All 118 tests pass. Real startup, microphone opening, and timed shutdown passed; the user confirmed the integrated voice pipeline works on 2026-09-10. Extended stability and offline/privacy checks remain separate work.
+- [x] 7.2 Added explicit waiting → capturing → transcribing → responding → synthesizing → speaking → waiting states with content-free reporting.
 - [ ] 7.3 Centralize device, model, endpoint, and limit configuration.
 - [ ] 7.4 Support Ctrl+C shutdown and recovery from module errors.
 - [ ] 7.5 Log stage and timing metadata without recording audio or conversation content by default.
@@ -115,7 +115,7 @@ Actions and tools, integrations, persistent memory, interruption during playback
 
 ## Resume here
 
-**Next micro step: 7.1 — connect capture, STT, local LLM, synthesis, and playback in `jarvis.app` with explicit dependencies.** Output shutdown/failure handling is verified with injected failures; all 113 tests pass. The user confirmed hearing the fixed diagnostic confirmation; full conversational responses and automatic return to detection remain to be wired and validated. Recognition improvements remain deferred until the full pipeline works.
+**Next micro step: 7.3 — consolidate configuration.** The user confirmed the integrated voice pipeline works on 2026-09-10. All 118 tests pass. Consolidated configuration, extended stability validation, and the final offline/privacy checks remain pending. Recognition improvements follow MVP consolidation.
 
 Resume verification on 2026-09-09: all 78 tests passed in `.venv`. The local STT diagnostic processed bundled sample 0 (6.625 seconds) with a nonempty result, 0.150-second model load, and 0.238-second inference. These are single-run measurements. At the time of this automated verification, live voice/accent validation was pending (subsequently accepted by the user): run `.venv/bin/python -m jarvis.capture.diagnostics --duration 90 --show-text`, try several English requests, then test activation without a request and silence. Transcript display is opt-in and audio is not saved by the diagnostic. The user subsequently confirmed it works, with recognition quality improvements deferred until after pipeline integration.
 
