@@ -90,7 +90,7 @@ Completion criterion: a transcribed request receives a response from a model run
 ## Module 6 — Text-to-speech (TTS) and playback
 
 - [x] 6.1 Define synthesis and playback contracts. Added in-memory `SynthesizedAudio`, `Synthesizer`, and `AudioPlayer` contracts with format validation, lifecycle cleanup, and content-free backend errors. All 97 tests pass; no TTS backend selected yet.
-- [ ] 6.2 Select a local backend and voice for the intended languages.
+- [x] 6.2 Selected Piper/VITS through sherpa-onnx 1.13.7 on CPU with `en_US-lessac-medium` (English, one speaker, 22,050 Hz). Reuses the installed runtime; native TTS configuration classes are available. Added the `tts` dependency extra and documented setup, planned model location, and initial parameters. Model download, inference/latency, and listening validation remain in 6.3.
 - [ ] 6.3 Synthesize and play a short response locally.
 - [ ] 6.4 Prevent self-activation from the assistant's voice; initially suspend detection during playback.
 - [ ] 6.5 Handle output failures and release resources on shutdown.
@@ -115,7 +115,7 @@ Actions and tools, integrations, persistent memory, interruption during playback
 
 ## Resume here
 
-**Next micro step: 6.2 — select a local TTS backend and voice.** Synthesis/playback contracts are implemented; all 97 tests pass. No TTS backend is installed yet. Recognition improvements remain deferred until the full pipeline works.
+**Next micro step: 6.3 — implement local synthesis/playback of a short response.** Selected Piper/VITS with `en_US-lessac-medium` through the installed sherpa-onnx runtime. The voice bundle was downloaded and extracted to `models/tts/vits-piper-en_US-lessac-medium/` on 2026-09-10; ONNX, tokens, model card, and phonemizer data are present. Adapters remain to be implemented; native inference, quality, and latency are unverified. Recognition improvements remain deferred until the full pipeline works.
 
 Resume verification on 2026-09-09: all 78 tests passed in `.venv`. The local STT diagnostic processed bundled sample 0 (6.625 seconds) with a nonempty result, 0.150-second model load, and 0.238-second inference. These are single-run measurements. At the time of this automated verification, live voice/accent validation was pending (subsequently accepted by the user): run `.venv/bin/python -m jarvis.capture.diagnostics --duration 90 --show-text`, try several English requests, then test activation without a request and silence. Transcript display is opt-in and audio is not saved by the diagnostic. The user subsequently confirmed it works, with recognition quality improvements deferred until after pipeline integration.
 

@@ -16,6 +16,7 @@ include = ["jarvis*"]
 [project.optional-dependencies]
 wakeword = ["sherpa-onnx==1.13.7", "numpy>=1.23,<3"]
 vad = ["sherpa-onnx==1.13.7", "numpy>=1.23,<3"]
+tts = ["sherpa-onnx==1.13.7", "numpy>=1.23,<3"]
 
 [tool.setuptools.package-data]
 "jarvis.wakeword" = ["keywords.txt"]

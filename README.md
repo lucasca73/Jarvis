@@ -449,6 +449,43 @@ context-manager cleanup. Backend failures use `SynthesisError` or
 Audio remains in memory and is not written by these contracts. A local TTS
 backend and output-device implementation will be selected in the next step.
 
+### Initial TTS selection
+
+Selected on 2026-09-10: Piper/VITS through sherpa-onnx on CPU, using the
+`en_US-lessac-medium` English voice (one speaker, 22,050 Hz). This reuses the
+installed sherpa-onnx 1.13.7 runtime used for wake word, VAD, and STT. Its
+`OfflineTtsVitsModelConfig` and `OfflineTtsConfig` classes are available in the
+development environment. Voice quality and latency have not yet been measured.
+See the [official voice documentation and samples](https://k2-fsa.github.io/sherpa/onnx/tts/all/English/vits-piper-en_US-lessac-medium.html).
+
+The optional dependencies are declared as `.[tts]`. Setup for the next step:
+
+```bash
+.venv/bin/python -m pip install -e ".[tts]"
+mkdir -p models/tts
+curl -fL https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-medium.tar.bz2 -o models/tts/vits-piper-en_US-lessac-medium.tar.bz2
+tar -xjf models/tts/vits-piper-en_US-lessac-medium.tar.bz2 -C models/tts
+```
+
+The planned model directory is `models/tts/vits-piper-en_US-lessac-medium/`.
+Keep the complete bundle, including phonemizer data and tokens. Normal synthesis
+will load explicit local files without downloading anything. Initial adapter
+settings will use CPU, two threads, speaker ID 0, and speed 1.0. The adapter
+will convert generated samples into signed 16-bit little-endian PCM in memory,
+preserving the voice's 22,050 Hz sample rate instead of forcing the microphone's
+16 kHz rate. Playback will use the existing sounddevice dependency.
+
+The voice bundle was downloaded and extracted on 2026-09-10. The archive SHA-256
+is `9e3febfacf0abf4270172d2958bcec246032b7e88efc2720840cc80c93de334e`
+(recorded locally, not compared against a publisher checksum). The ONNX model,
+tokens, model card, and phonemizer data are present under the planned directory.
+Model assets are ignored by Git.
+
+Native inference, output-device validation, and an audible test
+remain in step 6.3. The first test should measure synthesis time against generated
+audio duration and confirm the user can hear a short English response. Backend
+and voice selection remain replaceable behind the existing contracts.
+
 
 ### Local Ollama adapter
 
