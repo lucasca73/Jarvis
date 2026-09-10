@@ -478,3 +478,16 @@ and a full offline/privacy audit remain unverified in this step. See the
 Validation: all 89 tests passed. A real adapter call to the installed local
 `llama3.2:3b` returned 188 characters in 0.863 seconds (one smoke measurement,
 not a latency guarantee).
+
+Run the client-side privacy audit with:
+
+```bash
+OLLAMA_NO_CLOUD=1 .venv/bin/python -m jarvis.llm.privacy_diagnostics
+```
+
+The audit checks only local client configuration and does not contact Ollama.
+For the macOS Ollama application, configure `OLLAMA_NO_CLOUD=1` with
+`launchctl setenv` and restart the application, then run the audit in a shell
+that has the same setting. A passing audit does not prove behavior of a
+separately managed server; it confirms the Jarvis client is loopback-only and
+the server process was requested to disable cloud features.

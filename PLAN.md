@@ -83,7 +83,7 @@ Completion criterion: a spoken request after Jarvis produces useful text without
 - [x] 5.3 Added `OllamaLanguageModel` for single-turn English responses, direct loopback HTTP, and a fixed-prompt diagnostic with opt-in text display. All 89 tests passed; a real local call returned 188 characters in 0.863 seconds.
 - [x] 5.4 Add bounded, resettable conversation history in memory. `OllamaLanguageModel` retains four user/assistant turns by default, configurable through `max_history_turns`; `reset()` and `close()` clear it. Failed turns are not retained. All 90 tests pass.
 - [x] 5.5 Adapter translates socket timeouts, unavailable Ollama, missing models/endpoints, HTTP errors, and malformed/empty responses into content-free errors. Connections close on success and failure; recovery tests pass. No redirects, proxies, downloads, or remote fallback.
-- [ ] 5.6 Verify local-only inference configuration and ensure prompts/responses are excluded from application logs and persisted history by default.
+- [x] 5.6 Add a client-side local-only privacy audit. `jarvis.llm.privacy` verifies loopback endpoint/model naming and requires `OLLAMA_NO_CLOUD=1`; the adapter never logs or persists prompts/responses. Server-side behavior remains an external configuration responsibility. All 93 tests pass.
 
 Completion criterion: a transcribed request receives a response from a model running locally through Ollama; a backend failure leaves the assistant usable and does not send content elsewhere.
 
@@ -115,7 +115,7 @@ Actions and tools, integrations, persistent memory, interruption during playback
 
 ## Resume here
 
-**Next micro step: 5.6 — verify local-only inference configuration and privacy boundaries.** Ollama configuration, single-turn inference, and bounded resettable history are implemented and validated; all 90 tests pass. Server-side local-only configuration and a privacy audit remain. Recognition improvements remain deferred until the full pipeline works.
+**Next micro step: 6.1 — define synthesis and playback contracts.** Ollama configuration, bounded history, and client-side privacy checks are implemented; all 93 tests pass. Run `OLLAMA_NO_CLOUD=1 .venv/bin/python -m jarvis.llm.privacy_diagnostics` after configuring the Ollama server. Recognition improvements remain deferred until the full pipeline works.
 
 Resume verification on 2026-09-09: all 78 tests passed in `.venv`. The local STT diagnostic processed bundled sample 0 (6.625 seconds) with a nonempty result, 0.150-second model load, and 0.238-second inference. These are single-run measurements. At the time of this automated verification, live voice/accent validation was pending (subsequently accepted by the user): run `.venv/bin/python -m jarvis.capture.diagnostics --duration 90 --show-text`, try several English requests, then test activation without a request and silence. Transcript display is opt-in and audio is not saved by the diagnostic. The user subsequently confirmed it works, with recognition quality improvements deferred until after pipeline integration.
 
