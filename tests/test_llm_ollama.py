@@ -28,12 +28,13 @@ class OllamaTests(unittest.TestCase):
     def test_invalid_limits(self):
         for kwargs in ({'timeout_seconds': float('nan')}, {'timeout_seconds': 0},
                        {'context_tokens': True}, {'max_response_tokens': 0},
-                       {'keep_alive_seconds': -1}):
+                       {'keep_alive_seconds': -1}, {'max_history_turns': -1},
+                       {'max_history_turns': True}):
             with self.assertRaises(ValueError):
                 OllamaConfig(**kwargs)
 
     @patch('jarvis.llm.ollama.http.client.HTTPConnection')
-    def test_serializes_special_text_and_does_not_retain_history(self, factory):
+    def test_serializes_special_text_and_retains_bounded_history(self, factory):
         connection = factory.return_value
         connection.getresponse.return_value.status = 200
         connection.getresponse.return_value.read.return_value = response_body()
@@ -47,8 +48,32 @@ class OllamaTests(unittest.TestCase):
         self.assertEqual(payload['options'], {'num_ctx': 2048, 'num_predict': 100})
         factory.assert_called_with('127.0.0.1', 11434, timeout=30.0)
         model.respond(TextRequest('Another question'))
+        self.assertEqual(len(json.loads(connection.request.call_args.args[2])['messages']), 4)
+        model.reset()
+        model.respond(TextRequest('After reset'))
         self.assertEqual(len(json.loads(connection.request.call_args.args[2])['messages']), 2)
-        self.assertEqual(connection.close.call_count, 2)
+        self.assertEqual(connection.close.call_count, 3)
+
+    @patch('jarvis.llm.ollama.http.client.HTTPConnection')
+    def test_history_is_bounded_and_failed_turns_are_not_retained(self, factory):
+        connection = factory.return_value
+        response = connection.getresponse.return_value
+        response.status = 200
+        response.read.return_value = response_body()
+        model = OllamaLanguageModel(OllamaConfig(max_history_turns=2))
+        for index in range(3):
+            model.respond(TextRequest(f'Question {index}'))
+        payload = json.loads(connection.request.call_args.args[2])
+        self.assertEqual([m['content'] for m in payload['messages'][1:]],
+                         ['Question 0', 'A short answer.', 'Question 1', 'A short answer.', 'Question 2'])
+        response.status = 500
+        with self.assertRaises(LanguageModelError):
+            model.respond(TextRequest('Failed question'))
+        response.status = 200
+        response.read.return_value = response_body()
+        model.respond(TextRequest('Recovery'))
+        payload = json.loads(connection.request.call_args.args[2])
+        self.assertNotIn('Failed question', json.dumps(payload))
 
     @patch('jarvis.llm.ollama.http.client.HTTPConnection')
     def test_bad_responses_are_content_free_and_backend_recovers(self, factory):

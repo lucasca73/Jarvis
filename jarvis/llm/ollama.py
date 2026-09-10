@@ -24,6 +24,7 @@ class OllamaConfig:
     context_tokens: int = 2048
     max_response_tokens: int = 100
     keep_alive_seconds: int = 600
+    max_history_turns: int = 4
 
     def __post_init__(self) -> None:
         if not isinstance(self.model, str) or not self.model.strip():
@@ -46,14 +47,14 @@ class OllamaConfig:
                 or not isinstance(self.timeout_seconds, (int, float))
                 or not math.isfinite(self.timeout_seconds) or self.timeout_seconds <= 0):
             raise ValueError('timeout_seconds must be finite and positive')
-        for name in ('context_tokens', 'max_response_tokens', 'keep_alive_seconds'):
+        for name in ('context_tokens', 'max_response_tokens', 'keep_alive_seconds', 'max_history_turns'):
             value = getattr(self, name)
-            if type(value) is not int or value < (0 if name == 'keep_alive_seconds' else 1):
+            if type(value) is not int or value < (0 if name in ('keep_alive_seconds', 'max_history_turns') else 1):
                 raise ValueError(f'{name} has an invalid value')
 
 
 class OllamaLanguageModel(LanguageModel):
-    """No history, downloads, retries, redirects, environment proxies, or logging.
+    """Bounded in-memory history; no downloads, retries, redirects, or logging.
 
     The local Ollama service must also be configured for local-only operation;
     a loopback connection cannot enforce what a separately managed server does.
@@ -62,6 +63,7 @@ class OllamaLanguageModel(LanguageModel):
     def __init__(self, config: OllamaConfig | None = None) -> None:
         self.config = config if config is not None else OllamaConfig()
         self._closed = False
+        self._history: list[dict[str, str]] = []
 
     def respond(self, request: TextRequest) -> TextResponse:
         if self._closed:
@@ -71,12 +73,12 @@ class OllamaLanguageModel(LanguageModel):
         url = urlsplit(self.config.endpoint)
         connection = http.client.HTTPConnection(
             url.hostname, url.port or 80, timeout=self.config.timeout_seconds)
+        messages = [{'role': 'system', 'content': SYSTEM_PROMPT}]
+        messages.extend(self._history)
+        messages.append({'role': 'user', 'content': request.text})
         payload = {
             'model': self.config.model,
-            'messages': [
-                {'role': 'system', 'content': SYSTEM_PROMPT},
-                {'role': 'user', 'content': request.text},
-            ],
+            'messages': messages,
             'stream': False,
             'keep_alive': self.config.keep_alive_seconds,
             'options': {'num_ctx': self.config.context_tokens,
@@ -101,7 +103,14 @@ class OllamaLanguageModel(LanguageModel):
             message = result['message']
             if message.get('role') != 'assistant' or message.get('tool_calls'):
                 raise LanguageModelError('Local Ollama returned an unsupported response')
-            return TextResponse(message.get('content'))
+            result = TextResponse(message.get('content'))
+            if self.config.max_history_turns:
+                self._history.extend([
+                    {'role': 'user', 'content': request.text},
+                    {'role': 'assistant', 'content': result.text},
+                ])
+                self._history = self._history[-2 * self.config.max_history_turns:]
+            return result
         except LanguageModelError:
             raise
         except (OSError, http.client.HTTPException):
@@ -112,7 +121,9 @@ class OllamaLanguageModel(LanguageModel):
             connection.close()
 
     def reset(self) -> None:
-        """No history is retained by this single-turn adapter."""
+        """Discard all retained user and assistant turns."""
+        self._history.clear()
 
     def close(self) -> None:
+        self.reset()
         self._closed = True

@@ -455,8 +455,10 @@ Run a fixed, nonsensitive English question through the adapter:
 Without `--show-text`, output contains only timing and character count.
 `--model` and `--endpoint` override the diagnostic defaults. Programmatic callers
 can configure all limits with `OllamaConfig` and call `respond(TextRequest(...))`.
-This adapter handles one independent interaction at a time; bounded history and
-microphone integration remain later steps.
+This adapter retains up to four user/assistant turns by default. Set
+`max_history_turns=0` for independent interactions or choose another bound in
+`OllamaConfig`; `reset()` clears the history. Microphone integration remains a
+later step.
 
 The HTTP client connects directly to literal loopback IPs, ignores environment
 proxies, and rejects redirects. Cloud-named models are rejected. HTTP failures,
